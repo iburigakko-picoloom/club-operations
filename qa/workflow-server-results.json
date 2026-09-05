@@ -1,0 +1,70 @@
+{
+  "results": [
+    {
+      "name": "authenticated arrival still offers group selection",
+      "pass": true
+    },
+    {
+      "name": "account display name updates verified account on API",
+      "pass": true
+    },
+    {
+      "name": "invite button produces one-use server token and expiry",
+      "pass": true
+    },
+    {
+      "name": "logged-out invite preview reveals group but no member list",
+      "pass": true
+    },
+    {
+      "name": "preview does not consume invitation",
+      "pass": true
+    },
+    {
+      "name": "login resumes invitation without auto-joining",
+      "pass": true
+    },
+    {
+      "name": "explicit join consumes invitation and creates membership only",
+      "pass": true
+    },
+    {
+      "name": "new operator has no initial module edit grants",
+      "pass": true
+    },
+    {
+      "name": "new operator cannot issue invitations",
+      "pass": true
+    },
+    {
+      "name": "owner grants only selected module through UI and database",
+      "pass": true
+    },
+    {
+      "name": "existing-member invite offers open without consuming",
+      "pass": true
+    },
+    {
+      "name": "revoke clears displayed raw link and invalidates token",
+      "pass": true
+    },
+    {
+      "name": "expired or revoked invitation explains recovery",
+      "pass": true
+    },
+    {
+      "name": "server demo uses separate local data",
+      "pass": true
+    },
+    {
+      "name": "ending server demo restores real account without fake login",
+      "pass": true
+    },
+    {
+      "name": "no uncaught invitation/account frontend errors",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "transport": "Injected fetch -> TestClient/SQLite; no native browser network, cookie policy or real LINE test"
+}

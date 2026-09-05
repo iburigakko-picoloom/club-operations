@@ -1,0 +1,545 @@
+{
+  "results": [
+    {
+      "name": "route home",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route calendar",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route tasks",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route operations",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route settings",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route notices",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route notice/n1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route notice-edit",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route event/e1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route event/ex1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route event-edit/ex1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route day/2026-09-12",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route task/t1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route task-edit/t1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route attendance",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route carpools",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route car-add",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route car/plan1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route car-table/plan1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route settlement",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route venues",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route venue-edit/v1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route equipment",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route equipment-edit/i1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route members",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route member-edit/m4",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route roles",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route operators",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route group",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route notification-settings",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route car-settings",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route practice",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route practice-saved",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route practice-categories",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route menu-list",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "route menu-edit/menu_1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "home only notices and own tasks",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "club calendar hides executive/tasks",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "executive tasks projected",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "weekly UI saves5 dates",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "multiple date UI adds not overwrites same day",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "exec no-time all",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "practice home has four vertical entries",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "category list normal tap-to-edit",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "category edit mode has drag and delete",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "menu list uses independent tap-to-edit cards",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "menu reorder mode available",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "menu drag reorders within category",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "selection order retained",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "native practice no iframe",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "training flow shows three steps",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "current per-person-pattern times in UI",
+      "pass": true,
+      "detail": "['4人23分', '5人35分']"
+    },
+    {
+      "name": "reorder updates rows",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "context change warning without hidden recalculation",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "saved snapshot persisted",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "practice image preview",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "practice output save option follows latest flow",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "image save adds history once",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "practice history thumbnail list",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "saved editable sheets remain reachable",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "history preview omits duplicate add",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "master change does not alter saved sheet",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "duplicate has independent id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "storage restore saved sheet",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "real mouse drag moves rider",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "full car rejects atomically",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "linked roundtrip equality",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "register to driver header table",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "driver replacement riders preserved",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "tap fallback moves rider",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "copy intersects target participants",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "copy preserves source",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "single attendance toggle",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "member attendance view same state",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "monthly amounts based on real registered history",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "monthly lock created",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "locked ride edit prevented",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "month reopen preserves old record",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "notice minimal form auto author",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "task deadline no duplicate event",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "inventory decrement",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 360 home",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 360 calendar",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 360 car/plan1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 360 practice",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 360 members",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 390 home",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 390 calendar",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 390 car/plan1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 390 practice",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 390 members",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 430 home",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 430 calendar",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 430 car/plan1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 430 practice",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 430 members",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 768 home",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 768 calendar",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 768 car/plan1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 768 practice",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 768 members",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 1280 home",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 1280 calendar",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 1280 car/plan1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 1280 practice",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "width 1280 members",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "no unhandled JS errors",
+      "pass": true,
+      "detail": ""
+    }
+  ],
+  "errors": [],
+  "limitations": [
+    "HTML direct injection",
+    "in-memory storage adapter",
+    "No native network/Service Worker/OS-share or push tested"
+  ]
+}

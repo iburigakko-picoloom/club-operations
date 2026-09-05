@@ -1,0 +1,66 @@
+{
+  "results": [
+    {
+      "name": "actual auth screen",
+      "pass": true
+    },
+    {
+      "name": "registration establishes API session",
+      "pass": true
+    },
+    {
+      "name": "group create blank authoritative state",
+      "pass": true
+    },
+    {
+      "name": "gym stored on server",
+      "pass": true
+    },
+    {
+      "name": "roster stored separately from login accounts",
+      "pass": true
+    },
+    {
+      "name": "schedule and automatic defaults persisted",
+      "pass": true
+    },
+    {
+      "name": "native practice saves to shared DB",
+      "pass": true
+    },
+    {
+      "name": "attendance server round trip",
+      "pass": true
+    },
+    {
+      "name": "carpool starts from selected schedule",
+      "pass": true
+    },
+    {
+      "name": "carpool registration persisted and linked",
+      "pass": true
+    },
+    {
+      "name": "notice author server stamped",
+      "pass": true
+    },
+    {
+      "name": "shared task completion",
+      "pass": true
+    },
+    {
+      "name": "CAS conflict not silently overwritten",
+      "pass": true
+    },
+    {
+      "name": "reload recovers latest committed state",
+      "pass": true
+    },
+    {
+      "name": "no frontend JS errors with backend",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "transport": "Injected fetch -> FastAPI TestClient with real SQLite; not a native browser network test"
+}

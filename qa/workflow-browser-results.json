@@ -1,0 +1,249 @@
+{
+  "results": [
+    {
+      "name": "startup separates login from workspace",
+      "pass": true
+    },
+    {
+      "name": "LINE button disabled until configuration",
+      "pass": true
+    },
+    {
+      "name": "demo opens real group selection, not fake LINE login",
+      "pass": true
+    },
+    {
+      "name": "selecting a group opens existing five-tab home",
+      "pass": true
+    },
+    {
+      "name": "account works outside group tab layout",
+      "pass": true
+    },
+    {
+      "name": "display name saved without changing user id",
+      "pass": true
+    },
+    {
+      "name": "new demo group has separate empty data",
+      "pass": true
+    },
+    {
+      "name": "empty-group attendance handled",
+      "pass": true
+    },
+    {
+      "name": "multiple groups available",
+      "pass": true
+    },
+    {
+      "name": "original group preserved after switching",
+      "pass": true
+    },
+    {
+      "name": "roster and operators clearly separated",
+      "pass": true
+    },
+    {
+      "name": "operator permission picker saves selected scope",
+      "pass": true
+    },
+    {
+      "name": "demo cannot mint a fake real invitation",
+      "pass": true
+    },
+    {
+      "name": "invitation preview shows group and initial permission",
+      "pass": true
+    },
+    {
+      "name": "demo invitation does not fabricate a LINE identity",
+      "pass": true
+    },
+    {
+      "name": "carpool mode toggle always visible",
+      "pass": true
+    },
+    {
+      "name": "split preserves both placements",
+      "pass": true
+    },
+    {
+      "name": "split exposes explicit outbound and return tabs",
+      "pass": true
+    },
+    {
+      "name": "return edit does not change outbound",
+      "pass": true
+    },
+    {
+      "name": "merge asks which leg and never silently overwrites",
+      "pass": true
+    },
+    {
+      "name": "explicit return selection merged both legs",
+      "pass": true
+    },
+    {
+      "name": "merge undo restores split state",
+      "pass": true
+    },
+    {
+      "name": "copy chooses source before mutating target",
+      "pass": true
+    },
+    {
+      "name": "copy confirmation names source destination and exclusion",
+      "pass": true
+    },
+    {
+      "name": "copy excludes absentees and keeps source immutable",
+      "pass": true
+    },
+    {
+      "name": "copy preserves target price dates and reminders, clears personal adjustments",
+      "pass": true
+    },
+    {
+      "name": "copy undo restores original target",
+      "pass": true
+    },
+    {
+      "name": "table image action is discoverable and driver headings preserved",
+      "pass": true
+    },
+    {
+      "name": "car image shows preview with distinct save and share",
+      "pass": true
+    },
+    {
+      "name": "image preview has PNG payload",
+      "pass": true
+    },
+    {
+      "name": "calendar retains executive overlay",
+      "pass": true
+    },
+    {
+      "name": "executive overlay still projects task deadlines",
+      "pass": true
+    },
+    {
+      "name": "calendar export defaults to club-only despite overlay",
+      "pass": true
+    },
+    {
+      "name": "calendar export has deliberate audience in filename",
+      "pass": true
+    },
+    {
+      "name": "new car controls honor monthly lock",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 320 welcome",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 320 groups",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 320 account",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 320 operators",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 320 invite",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 320 car/plan1",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 320 car-copy-confirm/plan1/plan0",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 320 calendar",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 390 welcome",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 390 groups",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 390 account",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 390 operators",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 390 invite",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 390 car/plan1",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 390 car-copy-confirm/plan1/plan0",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 390 calendar",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 768 welcome",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 768 groups",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 768 account",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 768 operators",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 768 invite",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 768 car/plan1",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 768 car-copy-confirm/plan1/plan0",
+      "pass": true
+    },
+    {
+      "name": "new workflows no horizontal overflow 768 calendar",
+      "pass": true
+    },
+    {
+      "name": "no uncaught workflow errors",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "limitations": [
+    "Storage adapter / direct script injection",
+    "No real LINE account or OS share tested"
+  ]
+}

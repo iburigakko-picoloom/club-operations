@@ -1,0 +1,108 @@
+PASS route home 
+PASS route calendar 
+PASS route tasks 
+PASS route operations 
+PASS route settings 
+PASS route notices 
+PASS route notice/n1 
+PASS route notice-edit 
+PASS route event/e1 
+PASS route event/ex1 
+PASS route event-edit/ex1 
+PASS route day/2026-09-12 
+PASS route task/t1 
+PASS route task-edit/t1 
+PASS route attendance 
+PASS route carpools 
+PASS route car-add 
+PASS route car/plan1 
+PASS route car-table/plan1 
+PASS route settlement 
+PASS route venues 
+PASS route venue-edit/v1 
+PASS route equipment 
+PASS route equipment-edit/i1 
+PASS route members 
+PASS route member-edit/m4 
+PASS route roles 
+PASS route operators 
+PASS route group 
+PASS route notification-settings 
+PASS route car-settings 
+PASS route practice 
+PASS route practice-saved 
+PASS route practice-categories 
+PASS route menu-list 
+PASS route menu-edit/menu_1 
+PASS home only notices and own tasks 
+PASS club calendar hides executive/tasks 
+PASS executive tasks projected 
+PASS weekly UI saves5 dates 
+PASS multiple date UI adds not overwrites same day 
+PASS exec no-time all 
+PASS practice home has four vertical entries 
+PASS category list normal tap-to-edit 
+PASS category edit mode has drag and delete 
+PASS menu list uses independent tap-to-edit cards 
+PASS menu reorder mode available 
+PASS menu drag reorders within category 
+PASS selection order retained 
+PASS native practice no iframe 
+PASS training flow shows three steps 
+PASS current per-person-pattern times in UI ['4人23分', '5人35分']
+PASS reorder updates rows 
+PASS context change warning without hidden recalculation 
+PASS saved snapshot persisted 
+PASS practice image preview 
+PASS practice output save option follows latest flow 
+PASS image save adds history once 
+PASS practice history thumbnail list 
+PASS saved editable sheets remain reachable 
+PASS history preview omits duplicate add 
+PASS master change does not alter saved sheet 
+PASS duplicate has independent id 
+PASS storage restore saved sheet 
+PASS real mouse drag moves rider 
+PASS full car rejects atomically 
+PASS linked roundtrip equality 
+PASS register to driver header table 
+PASS driver replacement riders preserved 
+PASS tap fallback moves rider 
+PASS copy intersects target participants 
+PASS copy preserves source 
+PASS single attendance toggle 
+PASS member attendance view same state 
+PASS monthly amounts based on real registered history 
+PASS monthly lock created 
+PASS locked ride edit prevented 
+PASS month reopen preserves old record 
+PASS notice minimal form auto author 
+PASS task deadline no duplicate event 
+PASS inventory decrement 
+PASS width 360 home 
+PASS width 360 calendar 
+PASS width 360 car/plan1 
+PASS width 360 practice 
+PASS width 360 members 
+PASS width 390 home 
+PASS width 390 calendar 
+PASS width 390 car/plan1 
+PASS width 390 practice 
+PASS width 390 members 
+PASS width 430 home 
+PASS width 430 calendar 
+PASS width 430 car/plan1 
+PASS width 430 practice 
+PASS width 430 members 
+PASS width 768 home 
+PASS width 768 calendar 
+PASS width 768 car/plan1 
+PASS width 768 practice 
+PASS width 768 members 
+PASS width 1280 home 
+PASS width 1280 calendar 
+PASS width 1280 car/plan1 
+PASS width 1280 practice 
+PASS width 1280 members 
+PASS no unhandled JS errors 
+107/107 pass

@@ -1,0 +1,16 @@
+PASS actual auth screen
+PASS registration establishes API session
+PASS group create blank authoritative state
+PASS gym stored on server
+PASS roster stored separately from login accounts
+PASS schedule and automatic defaults persisted
+PASS native practice saves to shared DB
+PASS attendance server round trip
+PASS carpool starts from selected schedule
+PASS carpool registration persisted and linked
+PASS notice author server stamped
+PASS shared task completion
+PASS CAS conflict not silently overwritten
+PASS reload recovers latest committed state
+PASS no frontend JS errors with backend
+15/15 pass

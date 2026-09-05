@@ -1,0 +1,148 @@
+TAP version 13
+# Subtest: strict dates / month end / leap day
+ok 1 - strict dates / month end / leap day
+  ---
+  duration_ms: 1.768454
+  type: 'test'
+  ...
+# Subtest: time validation
+ok 2 - time validation
+  ---
+  duration_ms: 0.198913
+  type: 'test'
+  ...
+# Subtest: weekly selected weekdays and exact bounds
+ok 3 - weekly selected weekdays and exact bounds
+  ---
+  duration_ms: 0.941656
+  type: 'test'
+  ...
+# Subtest: multiple dates unique sorted; no silent overwrite
+ok 4 - multiple dates unique sorted; no silent overwrite
+  ---
+  duration_ms: 0.139466
+  type: 'test'
+  ...
+# Subtest: attendance rolling3 months and manual history untouched
+ok 5 - attendance rolling3 months and manual history untouched
+  ---
+  duration_ms: 0.299581
+  type: 'test'
+  ...
+# Subtest: calendar overlap, exec filter, task is a projection
+ok 6 - calendar overlap, exec filter, task is a projection
+  ---
+  duration_ms: 6.281698
+  type: 'test'
+  ...
+# Subtest: range events and no time
+ok 7 - range events and no time
+  ---
+  duration_ms: 0.148639
+  type: 'test'
+  ...
+# Subtest: legacy calcTotals regression 200 deterministic cases
+ok 8 - legacy calcTotals regression 200 deterministic cases
+  ---
+  duration_ms: 81.422434
+  type: 'test'
+  ...
+# Subtest: fixed item once and 5-person not4plus5
+ok 9 - fixed item once and 5-person not4plus5
+  ---
+  duration_ms: 0.490292
+  type: 'test'
+  ...
+# Subtest: current GitHub-style pattern totals use people-set equality
+ok 10 - current GitHub-style pattern totals use people-set equality
+  ---
+  duration_ms: 0.388753
+  type: 'test'
+  ...
+# Subtest: reject invalid sets and patterns
+ok 11 - reject invalid sets and patterns
+  ---
+  duration_ms: 0.234465
+  type: 'test'
+  ...
+# Subtest: legacy import migration/idempotence/source unchanged
+ok 12 - legacy import migration/idempotence/source unchanged
+  ---
+  duration_ms: 0.354532
+  type: 'test'
+  ...
+# Subtest: needed vs optional; absent excluded
+ok 13 - needed vs optional; absent excluded
+  ---
+  duration_ms: 0.229979
+  type: 'test'
+  ...
+# Subtest: capacity reject is atomic
+ok 14 - capacity reject is atomic
+  ---
+  duration_ms: 0.759268
+  type: 'test'
+  ...
+# Subtest: driver replacement preserves riders and returns old driver pool
+ok 15 - driver replacement preserves riders and returns old driver pool
+  ---
+  duration_ms: 0.231681
+  type: 'test'
+  ...
+# Subtest: driver moved out never promotes passenger
+ok 16 - driver moved out never promotes passenger
+  ---
+  duration_ms: 0.117213
+  type: 'test'
+  ...
+# Subtest: drag new creates driver / absent blocked
+ok 17 - drag new creates driver / absent blocked
+  ---
+  duration_ms: 0.189409
+  type: 'test'
+  ...
+# Subtest: split changes one leg only and disabled rejects
+ok 18 - split changes one leg only and disabled rejects
+  ---
+  duration_ms: 0.132295
+  type: 'test'
+  ...
+# Subtest: registration catches absent duplicate missing and driverless
+ok 19 - registration catches absent duplicate missing and driverless
+  ---
+  duration_ms: 0.550861
+  type: 'test'
+  ...
+# Subtest: settlement roundtrip receiver total and no self charge
+ok 20 - settlement roundtrip receiver total and no self charge
+  ---
+  duration_ms: 0.276277
+  type: 'test'
+  ...
+# Subtest: settlement excludes draft future cancel disabled
+ok 21 - settlement excludes draft future cancel disabled
+  ---
+  duration_ms: 0.202368
+  type: 'test'
+  ...
+# Subtest: settlement individual count/rate/exclusion and snapshot rate
+ok 22 - settlement individual count/rate/exclusion and snapshot rate
+  ---
+  duration_ms: 0.182609
+  type: 'test'
+  ...
+# Subtest: cross-month legs allocated correctly and unset not zero
+ok 23 - cross-month legs allocated correctly and unset not zero
+  ---
+  duration_ms: 0.110813
+  type: 'test'
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 23
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 146.779633

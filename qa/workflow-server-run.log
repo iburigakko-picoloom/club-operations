@@ -1,0 +1,17 @@
+PASS authenticated arrival still offers group selection
+PASS account display name updates verified account on API
+PASS invite button produces one-use server token and expiry
+PASS logged-out invite preview reveals group but no member list
+PASS preview does not consume invitation
+PASS login resumes invitation without auto-joining
+PASS explicit join consumes invitation and creates membership only
+PASS new operator has no initial module edit grants
+PASS new operator cannot issue invitations
+PASS owner grants only selected module through UI and database
+PASS existing-member invite offers open without consuming
+PASS revoke clears displayed raw link and invalidates token
+PASS expired or revoked invitation explains recovery
+PASS server demo uses separate local data
+PASS ending server demo restores real account without fake login
+PASS no uncaught invitation/account frontend errors
+16/16 pass

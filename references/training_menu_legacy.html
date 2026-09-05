@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>練習メニュー</title>
+  <style>
+    :root {
+      --green: #17823b;
+      --green-dark: #0c5f2a;
+      --green-soft: #eaf6ee;
+      --green-soft-2: #f4fbf6;
+      --bg: #f7faf8;
+      --text: #16201a;
+      --muted: #6a756f;
+      --line: #dce6df;
+      --danger: #d94141;
+      --danger-bg: #fff1f1;
+      --shadow: 0 10px 28px rgba(18, 45, 25, .10);
+      --radius-lg: 26px;
+      --radius-md: 18px;
+      --radius-sm: 12px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 12%, rgba(23,130,59,.13), transparent 30%),
+        radial-gradient(circle at 85% 20%, rgba(23,130,59,.10), transparent 26%),
+        linear-gradient(180deg, #ffffff 0%, var(--bg) 100%);
+    }
+
+    button, input { font: inherit; }
+    button { border: 0; background: none; cursor: pointer; color: inherit; }
+    input { color: var(--text); }
+
+    .app {
+      width: 100%;
+      max-width: 460px;
+      height: 100dvh;
+      margin: 0 auto;
+      overflow: hidden;
+      position: relative;
+      padding: 18px 18px calc(14px + var(--safe-bottom));
+    }
+
+    .screen {
+      display: none;
+      height: 100%;
+      min-height: 0;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .screen.active { display: flex; }
+
+    .top {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 44px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--green-dark);
+      font-weight: 800;
+      letter-spacing: .03em;
+    }
+    .logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 11px;
+      background: var(--green);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      box-shadow: 0 8px 20px rgba(23,130,59,.24);
+    }
+    .back {
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      color: var(--green-dark);
+      font-size: 22px;
+      display: grid;
+      place-items: center;
+    }
+    .title {
+      flex-shrink: 0;
+      font-size: clamp(30px, 9vw, 46px);
+      font-weight: 900;
+      letter-spacing: .08em;
+      margin: 8px 0 6px;
+      text-align: center;
+    }
+    .sub-title {
+      margin: -4px 0 8px;
+      text-align: center;
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .sub-title strong { color: var(--green); }
+
+    .scroll-area {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 2px 2px 4px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(23,130,59,.45) transparent;
+    }
+    .scroll-area::-webkit-scrollbar { width: 7px; }
+    .scroll-area::-webkit-scrollbar-thumb {
+      background: rgba(23,130,59,.35);
+      border-radius: 999px;
+    }
+
+    .static-area {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      padding: 2px 2px 4px;
+    }
+    .list-page-area {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      padding: 2px 2px 0;
+    }
+    .pager-bottom { padding-top: 0; }
+    .compact { min-height: 46px; font-size: 15px; border-radius: 15px; }
+    .page-indicator { pointer-events: none; flex: .7; }
+
+    .card {
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(220,230,223,.95);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .home-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      justify-content: center;
+      flex: 1;
+      min-height: 0;
+    }
+    .home-card {
+      min-height: 116px;
+      border-radius: 26px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: 72px 1fr 28px;
+      align-items: center;
+      gap: 18px;
+      padding: 20px;
+      text-align: left;
+    }
+    .home-icon {
+      width: 68px;
+      height: 68px;
+      border-radius: 24px;
+      background: var(--green-soft);
+      color: var(--green);
+      display: grid;
+      place-items: center;
+      font-size: 34px;
+      font-weight: 900;
+    }
+    .home-card span:nth-child(2) {
+      font-size: 25px;
+      font-weight: 900;
+      letter-spacing: .03em;
+    }
+    .chevron { color: var(--green); font-size: 30px; font-weight: 900; }
+
+    .field-block { margin-bottom: 15px; position: relative; }
+    .label {
+      display: block;
+      margin: 0 0 8px 4px;
+      font-weight: 900;
+      font-size: 16px;
+      color: var(--text);
+    }
+    .text-input, .select-button, .num-input {
+      width: 100%;
+      border: 2px solid var(--line);
+      background: #fff;
+      border-radius: 16px;
+      min-height: 54px;
+      padding: 0 15px;
+      font-weight: 800;
+      outline: none;
+    }
+    .text-input:focus, .num-input:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 4px rgba(23,130,59,.10);
+    }
+    .select-button {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text);
+    }
+    .select-button b { font-weight: 900; }
+    .drop-panel {
+      display: none;
+      position: absolute;
+      z-index: 20;
+      left: 0;
+      right: 0;
+      top: calc(100% - 4px);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      max-height: 218px;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .drop-panel.open { display: block; }
+    .drop-item {
+      min-height: 46px;
+      border-radius: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-weight: 850;
+      color: var(--text);
+    }
+    .drop-item.active { background: var(--green-soft); color: var(--green-dark); }
+    .drop-item.add-new { color: var(--green); border-top: 1px solid var(--line); margin-top: 6px; }
+
+    .menu-select-card {
+      height: min(39dvh, 340px);
+      min-height: 230px;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .menu-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 42px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      min-height: 58px;
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+    }
+    .menu-row:last-child { border-bottom: 0; }
+    .select-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 11px;
+      border: 2px solid var(--green);
+      color: var(--green);
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      font-size: 14px;
+      background: #fff;
+    }
+    .select-mark.selected {
+      border-color: var(--green);
+      background: var(--green);
+      color: #fff;
+      border-radius: 999px;
+    }
+    .row-name { font-size: 18px; font-weight: 900; }
+    .row-meta { font-size: 12px; color: var(--muted); font-weight: 800; margin-top: 4px; }
+    .fixed-pill {
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: #f1f3f2;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .bottom {
+      flex-shrink: 0;
+      padding-top: 2px;
+      display: flex;
+      gap: 10px;
+    }
+    .primary, .secondary, .danger-button {
+      min-height: 58px;
+      border-radius: 18px;
+      font-size: 20px;
+      font-weight: 900;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .primary {
+      background: linear-gradient(180deg, var(--green) 0%, var(--green-dark) 100%);
+      color: #fff;
+      box-shadow: 0 10px 24px rgba(23,130,59,.24);
+    }
+    .secondary {
+      color: var(--green-dark);
+      background: #fff;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+    .danger-button { color: #fff; background: var(--danger); }
+    .primary:disabled, .secondary:disabled { opacity: .45; }
+
+    .toggle-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      margin-bottom: 15px;
+    }
+    .toggle-card h3 { margin: 0; font-size: 16px; }
+    .toggle-card p { margin: 4px 0 0; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .switch {
+      width: 58px;
+      height: 34px;
+      border-radius: 999px;
+      background: #d9e2dd;
+      padding: 4px;
+      flex-shrink: 0;
+      transition: .2s;
+    }
+    .switch::after {
+      content: "";
+      display: block;
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,.18);
+      transition: .2s;
+    }
+    .switch.on { background: var(--green); }
+    .switch.on::after { transform: translateX(24px); }
+
+    .table-card {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 0;
+      border-radius: 22px;
+    }
+    .set-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 14px;
+    }
+    .set-table th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #f7faf8;
+      padding: 12px 8px;
+      border-bottom: 1px solid var(--line);
+      font-size: 16px;
+    }
+    .set-table td {
+      padding: 12px 8px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+    }
+    .set-table tr:last-child td { border-bottom: 0; }
+    .set-name { font-weight: 900; font-size: 14px; }
+    .set-name small { display: block; color: var(--muted); font-weight: 800; margin-top: 4px; font-size: 11px; }
+    .stepper {
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 96px;
+      height: 38px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+      overflow: hidden;
+    }
+    .stepper button {
+      width: 30px;
+      height: 100%;
+      color: var(--green);
+      font-weight: 900;
+      font-size: 20px;
+    }
+    .stepper span { font-weight: 900; font-size: 14px; }
+    .summary {
+      flex-shrink: 0;
+      display: grid;
+      gap: 8px;
+    }
+    .summary-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 82px 1fr;
+      gap: 6px 10px;
+      align-items: baseline;
+      font-weight: 850;
+    }
+    .summary-grid .big { font-size: 24px; color: var(--green); font-weight: 950; }
+    .note { font-size: 12px; color: var(--muted); font-weight: 800; margin-top: 4px; }
+    .warning {
+      display: none;
+      background: var(--danger-bg);
+      border: 1px solid rgba(217,65,65,.35);
+      color: #9e2222;
+      border-radius: 16px;
+      padding: 10px 12px;
+      font-weight: 850;
+      font-size: 13px;
+    }
+    .warning.show { display: block; }
+
+    .chips {
+      flex-shrink: 0;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 2px 2px 10px;
+      scrollbar-width: none;
+    }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip {
+      flex: 0 0 auto;
+      height: 38px;
+      border-radius: 999px;
+      padding: 0 18px;
+      background: #fff;
+      border: 1px solid rgba(23,130,59,.25);
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+    .chip.active { background: var(--green); color: #fff; border-color: var(--green); }
+
+    .list-card {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 13px 14px;
+      margin-bottom: 10px;
+    }
+    .list-card h3 { margin: 0; font-size: 18px; }
+    .list-card p { margin: 5px 0 0; color: var(--muted); font-weight: 800; font-size: 12px; }
+    .list-actions { display: flex; flex-direction: row; gap: 8px; }
+    .mini-btn {
+      min-width: 70px;
+      height: 33px;
+      border-radius: 11px;
+      border: 1px solid var(--green);
+      color: var(--green-dark);
+      font-weight: 900;
+      background: #fff;
+    }
+    .mini-btn.delete { color: var(--danger); border-color: rgba(217,65,65,.55); }
+
+    .empty {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      font-weight: 850;
+      padding: 24px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 20, 10, .35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+      z-index: 100;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      width: min(420px, 100%);
+      background: #fff;
+      border-radius: 24px;
+      padding: 18px;
+      box-shadow: 0 18px 48px rgba(0,0,0,.28);
+    }
+    .modal h3 { margin: 0 0 8px; font-size: 20px; }
+    .modal p { margin: 0 0 16px; color: var(--muted); font-weight: 750; }
+    .modal-actions { display: flex; gap: 10px; }
+
+    .preview-wrap {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 110;
+      background: rgba(5, 20, 10, .55);
+      padding: 18px;
+      align-items: center;
+      justify-content: center;
+    }
+    .preview-wrap.open { display: flex; }
+    .preview-card {
+      width: min(430px, 100%);
+      max-height: calc(100dvh - 36px);
+      background: #fff;
+      border-radius: 22px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .preview-card img {
+      max-width: 100%;
+      max-height: calc(100dvh - 170px);
+      object-fit: contain;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .preview-actions { display: flex; gap: 10px; }
+
+    @media (max-height: 720px) {
+      .title { font-size: 30px; margin: 2px 0; }
+      .home-card { min-height: 92px; }
+      .home-icon { width: 56px; height: 56px; font-size: 28px; }
+      .home-card span:nth-child(2) { font-size: 21px; }
+      .primary, .secondary { min-height: 52px; font-size: 18px; }
+      .card { padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <section class="screen active" id="screen-home">
+      <div class="top">
+        <div class="brand"><span>練習メニュー</span></div>
+      </div>
+      <h1 class="title">ホーム</h1>
+      <div class="home-menu">
+        <button class="home-card" data-go="create">
+          <span class="home-icon">▦</span><span>メニュー表作成</span><span class="chevron">›</span>
+        </button>
+        <button class="home-card" data-go="add">
+          <span class="home-icon">＋</span><span>メニュー追加</span><span class="chevron">›</span>
+        </button>
+        <button class="home-card" data-go="list">
+          <span class="home-icon">≡</span><span>メニュー一覧</span><span class="chevron">›</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-create">
+      <div class="top">
+        <button class="back" data-go="home">‹</button>
+        <div class="brand"><span>練習メニュー</span></div>
+      </div>
+      <h1 class="title">メニュー表作成</h1>
+      <div class="static-area">
+        <div class="field-block">
+          <label class="label">分類</label>
+          <div class="chips category-box" id="createCategoryChips"></div>
+        </div>
+        <div class="field-block">
+          <label class="label">メニュー表の名前</label>
+          <input class="text-input" id="sheetTitle" value="春練メニュー" />
+        </div>
+        <div class="field-block">
+          <label class="label">メニュー</label>
+          <div class="card menu-select-card" id="menuSelectList"></div>
+        </div>
+      </div>
+      <div class="bottom">
+        <button class="primary" id="startSetBtn">作成</button>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-sets">
+      <div class="top">
+        <button class="back" data-go="create">‹</button>
+        <div class="brand"><span>練習メニュー</span></div>
+      </div>
+      <h1 class="title">セット数</h1>
+      <div class="sub-title">メニュー表名：<strong id="setSheetTitle">春練メニュー</strong></div>
+      <div class="card table-card">
+        <table class="set-table">
+          <thead><tr><th>メニュー</th><th>4人</th><th>5人</th></tr></thead>
+          <tbody id="setRows"></tbody>
+        </table>
+      </div>
+      <div class="summary">
+        <div class="summary-card">
+          <div class="summary-grid">
+            <div>合計</div><div></div>
+            <div>4人</div><div><span class="big" id="totalSets4">0</span> set</div>
+            <div>5人</div><div><span class="big" id="totalSets5">0</span> set</div>
+            <div>所要時間</div><div><span class="big" id="totalSeconds">0分 0秒</span></div>
+          </div>
+          <div class="note">※ 5人を基準に計算。固定時間メニューはセット数なしで加算。</div>
+        </div>
+        <div class="warning" id="warningBox">注意：4人と5人で合計セット数が異なります。</div>
+      </div>
+      <div class="bottom">
+        <button class="primary" id="exportImageBtn">画像出力</button>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-add">
+      <div class="top">
+        <button class="back" data-go="home">‹</button>
+        <div class="brand"><span>練習メニュー</span></div>
+      </div>
+      <h1 class="title" id="addTitle">メニュー追加</h1>
+      <div class="static-area">
+        <div class="card">
+          <div class="field-block">
+            <label class="label">名前</label>
+            <input class="text-input" id="menuName" placeholder="例：スマッシュノック" />
+          </div>
+          <div class="field-block">
+            <label class="label">分類</label>
+            <button class="select-button" id="addCategoryBtn"><b id="addCategoryText">分類を選択</b><span>⌄</span></button>
+            <div class="drop-panel" id="addCategoryPanel"></div>
+          </div>
+          <button class="toggle-card" id="fixedToggle" type="button">
+            <div>
+              <h3>セット数を選ばないメニュー</h3>
+              <p>画像出力でもセット数を表示しません</p>
+            </div>
+            <span class="switch" id="fixedSwitch"></span>
+          </button>
+          <div class="field-block">
+            <label class="label" id="timeLabel">時間（秒 / 1set・1人）</label>
+            <input class="num-input" id="menuSeconds" type="number" min="0" step="1" placeholder="例：120" />
+          </div>
+        </div>
+      </div>
+      <div class="bottom">
+        <button class="primary" id="saveMenuBtn">保存</button>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-list">
+      <div class="top">
+        <button class="back" data-go="home">‹</button>
+        <div class="brand"><span>練習メニュー</span></div>
+      </div>
+      <h1 class="title">メニュー一覧</h1>
+      <label class="label">分類</label>
+      <div class="chips" id="categoryChips"></div>
+      <div class="list-page-area" id="menuList"></div>
+      <div class="bottom pager-bottom">
+        <button class="secondary compact" id="prevListPage">前へ</button>
+        <button class="secondary compact page-indicator" id="listPageIndicator" type="button">1 / 1</button>
+        <button class="secondary compact" id="nextListPage">次へ</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="confirmModal">
+    <div class="modal">
+      <h3>消去しますか？</h3>
+      <p id="confirmText"></p>
+      <div class="modal-actions">
+        <button class="secondary" id="cancelDelete">キャンセル</button>
+        <button class="danger-button" id="confirmDelete">消去</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="preview-wrap" id="previewWrap">
+    <div class="preview-card">
+      <img id="previewImg" alt="画像プレビュー" />
+      <div class="preview-actions">
+        <button class="secondary" id="closePreview">閉じる</button>
+        <button class="primary" id="downloadImage">保存</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const STORAGE_KEY = 'training-menu-maker-v1';
+  const defaultState = {
+    categories: [
+      { id: 'cat_basic', name: '基礎' },
+      { id: 'cat_knock', name: 'ノック' },
+      { id: 'cat_footwork', name: 'フットワーク' },
+      { id: 'cat_game', name: 'ゲーム' },
+      { id: 'cat_core', name: '体幹' },
+      { id: 'cat_other', name: 'その他' }
+    ],
+    menus: [
+      { id: 'menu_1', name: '基礎打ち', categoryId: 'cat_basic', seconds: 300, requiresSets: true },
+      { id: 'menu_2', name: 'スマッシュノック', categoryId: 'cat_knock', seconds: 120, requiresSets: true },
+      { id: 'menu_3', name: 'フットワーク', categoryId: 'cat_footwork', seconds: 180, requiresSets: true },
+      { id: 'menu_4', name: 'ゲーム練習', categoryId: 'cat_game', seconds: 480, requiresSets: true },
+      { id: 'menu_5', name: '体幹トレーニング', categoryId: 'cat_core', seconds: 600, requiresSets: false },
+      { id: 'menu_6', name: '休憩', categoryId: 'cat_other', seconds: 300, requiresSets: false }
+    ]
+  };
+
+  let state = loadState();
+  migrateState();
+  let currentScreen = 'home';
+  let createCategory = 'all';
+  let listCategory = 'all';
+  let selectedMenuIds = [];
+  let currentSheetTitle = '春練メニュー';
+  let setPlan = [];
+  let addCategoryId = state.categories[0]?.id || '';
+  let editingMenuId = null;
+  let deleteTargetId = null;
+  let listPage = 0;
+  const LIST_PAGE_SIZE = 4;
+  let lastImageDataUrl = '';
+
+  const $ = (id) => document.getElementById(id);
+
+  function uid(prefix) {
+    return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : structuredClone(defaultState);
+    } catch (e) {
+      return structuredClone(defaultState);
+    }
+  }
+
+  function migrateState() {
+    let changed = false;
+    state.menus = (state.menus || []).map(menu => {
+      if (menu.seconds === undefined) {
+        const legacyMinutes = Number(menu.minutes ?? 0);
+        menu.seconds = legacyMinutes * 60;
+        changed = true;
+      }
+      if ('minutes' in menu) {
+        delete menu.minutes;
+        changed = true;
+      }
+      return menu;
+    });
+    if (changed) saveState();
+  }
+
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function showScreen(name) {
+    currentScreen = name;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    $(`screen-${name}`).classList.add('active');
+    closeDropdowns();
+    if (name === 'create') renderCreateScreen();
+    if (name === 'sets') renderSetScreen();
+    if (name === 'add') renderAddScreen();
+    if (name === 'list') renderListScreen();
+  }
+
+  function categoryName(id) {
+    return state.categories.find(c => c.id === id)?.name || '未分類';
+  }
+
+  function findMenu(id) {
+    return state.menus.find(m => m.id === id);
+  }
+
+  function closeDropdowns() {
+    document.querySelectorAll('.drop-panel').forEach(p => p.classList.remove('open'));
+  }
+
+  function renderCategoryPanel(panelEl, selectedId, onPick, includeAll = false, includeAddNew = false) {
+    panelEl.innerHTML = '';
+    if (includeAll) {
+      const all = document.createElement('button');
+      all.className = 'drop-item' + (selectedId === 'all' ? ' active' : '');
+      all.innerHTML = `<span>すべて</span>${selectedId === 'all' ? '<span>✓</span>' : ''}`;
+      all.addEventListener('click', () => onPick('all'));
+      panelEl.appendChild(all);
+    }
+    state.categories.forEach(cat => {
+      const btn = document.createElement('button');
+      btn.className = 'drop-item' + (selectedId === cat.id ? ' active' : '');
+      btn.innerHTML = `<span>${cat.name}</span>${selectedId === cat.id ? '<span>✓</span>' : ''}`;
+      btn.addEventListener('click', () => onPick(cat.id));
+      panelEl.appendChild(btn);
+    });
+    if (includeAddNew) {
+      const add = document.createElement('button');
+      add.className = 'drop-item add-new';
+      add.innerHTML = '<span>＋新規追加</span>';
+      add.addEventListener('click', () => {
+        const name = prompt('新しい分類名を入力してください');
+        if (!name || !name.trim()) return;
+        const newCat = { id: uid('cat'), name: name.trim() };
+        state.categories.push(newCat);
+        addCategoryId = newCat.id;
+        saveState();
+        closeDropdowns();
+        renderAddScreen();
+      });
+      panelEl.appendChild(add);
+    }
+  }
+
+  function renderCategoryChips(containerEl, selectedId, onPick, includeAll = false, includeAddNew = false) {
+    if (!containerEl) return;
+    containerEl.innerHTML = '';
+    if (includeAll) {
+      const chip = document.createElement('button');
+      chip.className = 'chip' + (selectedId === 'all' ? ' active' : '');
+      chip.textContent = 'すべて';
+      chip.addEventListener('click', () => onPick('all'));
+      containerEl.appendChild(chip);
+    }
+    state.categories.forEach(cat => {
+      const chip = document.createElement('button');
+      chip.className = 'chip' + (selectedId === cat.id ? ' active' : '');
+      chip.textContent = cat.name;
+      chip.addEventListener('click', () => onPick(cat.id));
+      containerEl.appendChild(chip);
+    });
+    if (includeAddNew) {
+      const chip = document.createElement('button');
+      chip.className = 'chip add-chip';
+      chip.textContent = '＋新規追加';
+      chip.addEventListener('click', () => {
+        const name = prompt('新しい分類名を入力してください');
+        if (!name || !name.trim()) return;
+        const newCat = { id: uid('cat'), name: name.trim() };
+        state.categories.push(newCat);
+        addCategoryId = newCat.id;
+        saveState();
+        renderAddScreen();
+      });
+      containerEl.appendChild(chip);
+    }
+  }
+
+  function renderCreateScreen() {
+    renderCategoryChips($('createCategoryChips'), createCategory, (id) => {
+      createCategory = id;
+      renderCreateScreen();
+    }, true, false);
+
+    const list = $('menuSelectList');
+    const menus = state.menus.filter(m => createCategory === 'all' || m.categoryId === createCategory);
+    if (!menus.length) {
+      list.innerHTML = '<div class="empty">この分類にはメニューがありません</div>';
+      return;
+    }
+    list.innerHTML = '';
+    menus.forEach(menu => {
+      const order = selectedMenuIds.indexOf(menu.id) + 1;
+      const selected = order > 0;
+      const row = document.createElement('button');
+      row.className = 'menu-row';
+      row.innerHTML = `
+        <span class="select-mark ${selected ? 'selected' : ''}">${selected ? order : ''}</span>
+        <span>
+          <span class="row-name">${escapeHTML(menu.name)}</span>
+          <span class="row-meta">${categoryName(menu.categoryId)} / ${menu.seconds}秒 / ${menu.requiresSets ? '1set・1人' : '固定時間'}</span>
+        </span>
+        ${menu.requiresSets ? '' : '<span class="fixed-pill">セットなし</span>'}
+      `;
+      row.addEventListener('click', () => toggleSelect(menu.id));
+      list.appendChild(row);
+    });
+  }
+
+  function toggleSelect(menuId) {
+    const index = selectedMenuIds.indexOf(menuId);
+    if (index >= 0) selectedMenuIds.splice(index, 1);
+    else selectedMenuIds.push(menuId);
+    renderCreateScreen();
+  }
+
+  function startSetSelection() {
+    if (!selectedMenuIds.length) {
+      alert('メニューを1つ以上選択してください');
+      return;
+    }
+    currentSheetTitle = $('sheetTitle').value.trim() || 'メニュー表';
+    setPlan = selectedMenuIds.map(id => {
+      const menu = findMenu(id);
+      const existing = setPlan.find(r => r.menuId === id);
+      return {
+        menuId: id,
+        sets4: existing?.sets4 ?? (menu.requiresSets ? 1 : 0),
+        sets5: existing?.sets5 ?? (menu.requiresSets ? 1 : 0)
+      };
+    });
+    showScreen('sets');
+  }
+
+  function renderSetScreen() {
+    $('setSheetTitle').textContent = currentSheetTitle;
+    const tbody = $('setRows');
+    tbody.innerHTML = '';
+    setPlan.forEach((row, index) => {
+      const menu = findMenu(row.menuId);
+      if (!menu) return;
+      const tr = document.createElement('tr');
+      if (menu.requiresSets) {
+        tr.innerHTML = `
+          <td><div class="set-name">${index + 1}. ${escapeHTML(menu.name)}<small>${menu.seconds}秒 / 1set・1人</small></div></td>
+          <td>${stepperHTML(index, 'sets4', row.sets4)}</td>
+          <td>${stepperHTML(index, 'sets5', row.sets5)}</td>
+        `;
+      } else {
+        tr.innerHTML = `
+          <td><div class="set-name">${index + 1}. ${escapeHTML(menu.name)}<small>固定時間 ${menu.seconds}秒</small></div></td>
+          <td colspan="2"><span class="fixed-pill">セット数なし</span></td>
+        `;
+      }
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll('[data-step]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const index = Number(btn.dataset.index);
+        const key = btn.dataset.key;
+        const delta = Number(btn.dataset.step);
+        setPlan[index][key] = Math.max(0, setPlan[index][key] + delta);
+        renderSetScreen();
+      });
+    });
+    const totals = calcTotals();
+    $('totalSets4').textContent = totals.sets4;
+    $('totalSets5').textContent = totals.sets5;
+    $('totalSeconds').textContent = formatSeconds(totals.seconds);
+    $('warningBox').classList.toggle('show', totals.sets4 !== totals.sets5);
+  }
+
+  function stepperHTML(index, key, value) {
+    return `
+      <span class="stepper">
+        <button data-step="-1" data-index="${index}" data-key="${key}">−</button>
+        <span>${value} set</span>
+        <button data-step="1" data-index="${index}" data-key="${key}">＋</button>
+      </span>
+    `;
+  }
+
+  function calcTotals() {
+    let sets4 = 0;
+    let sets5 = 0;
+    let seconds = 0;
+    setPlan.forEach(row => {
+      const menu = findMenu(row.menuId);
+      if (!menu) return;
+      if (menu.requiresSets) {
+        sets4 += row.sets4;
+        sets5 += row.sets5;
+        seconds += menu.seconds * row.sets5 * 5;
+      } else {
+        seconds += menu.seconds;
+      }
+    });
+    return { sets4, sets5, seconds };
+  }
+
+  function renderAddScreen(menuId = editingMenuId) {
+    const editing = menuId ? findMenu(menuId) : null;
+    $('addTitle').textContent = editing ? 'メニュー編集' : 'メニュー追加';
+    if (editing && editingMenuId) {
+      $('menuName').value = editing.name;
+      $('menuSeconds').value = editing.seconds;
+      addCategoryId = editing.categoryId;
+      setFixedSwitch(!editing.requiresSets);
+      editingMenuId = menuId;
+    } else if (!editingMenuId) {
+      $('menuName').value = $('menuName').value || '';
+      $('menuSeconds').value = $('menuSeconds').value || '';
+    }
+    $('addCategoryText').textContent = categoryName(addCategoryId) || '分類を選択';
+    renderCategoryPanel($('addCategoryPanel'), addCategoryId, (id) => {
+      addCategoryId = id;
+      closeDropdowns();
+      renderAddScreen();
+    }, false, true);
+    updateTimeLabel();
+  }
+
+  function setFixedSwitch(on) {
+    $('fixedSwitch').classList.toggle('on', !!on);
+  }
+  function fixedMode() {
+    return $('fixedSwitch').classList.contains('on');
+  }
+  function updateTimeLabel() {
+    $('timeLabel').textContent = fixedMode() ? '時間（秒・固定）' : '時間（秒 / 1set・1人）';
+  }
+
+  function resetAddForm() {
+    editingMenuId = null;
+    $('menuName').value = '';
+    $('menuSeconds').value = '';
+    addCategoryId = state.categories[0]?.id || '';
+    setFixedSwitch(false);
+    updateTimeLabel();
+  }
+
+  function saveMenu() {
+    const name = $('menuName').value.trim();
+    const seconds = Number($('menuSeconds').value);
+    if (!name) return alert('名前を入力してください');
+    if (!addCategoryId) return alert('分類を選択してください');
+    if (!Number.isFinite(seconds) || seconds < 0) return alert('時間を入力してください');
+    const data = { name, categoryId: addCategoryId, seconds, requiresSets: !fixedMode() };
+    if (editingMenuId) {
+      const target = findMenu(editingMenuId);
+      Object.assign(target, data);
+      editingMenuId = null;
+    } else {
+      state.menus.push({ id: uid('menu'), ...data });
+    }
+    saveState();
+    resetAddForm();
+    showScreen('list');
+  }
+
+  function renderListScreen() {
+    const chips = $('categoryChips');
+    chips.innerHTML = '';
+    const allChip = document.createElement('button');
+    allChip.className = 'chip' + (listCategory === 'all' ? ' active' : '');
+    allChip.textContent = 'すべて';
+    allChip.addEventListener('click', () => { listCategory = 'all'; listPage = 0; renderListScreen(); });
+    chips.appendChild(allChip);
+    state.categories.forEach(cat => {
+      const chip = document.createElement('button');
+      chip.className = 'chip' + (listCategory === cat.id ? ' active' : '');
+      chip.textContent = cat.name;
+      chip.addEventListener('click', () => { listCategory = cat.id; listPage = 0; renderListScreen(); });
+      chips.appendChild(chip);
+    });
+
+    const list = $('menuList');
+    const menus = state.menus.filter(m => listCategory === 'all' || m.categoryId === listCategory);
+    const totalPages = Math.max(1, Math.ceil(menus.length / LIST_PAGE_SIZE));
+    if (listPage >= totalPages) listPage = totalPages - 1;
+    if (!menus.length) {
+      list.innerHTML = '<div class="empty">メニューがありません</div>';
+      $('listPageIndicator').textContent = '0 / 0';
+      $('prevListPage').disabled = true;
+      $('nextListPage').disabled = true;
+      return;
+    }
+    $('listPageIndicator').textContent = `${listPage + 1} / ${totalPages}`;
+    $('prevListPage').disabled = listPage <= 0;
+    $('nextListPage').disabled = listPage >= totalPages - 1;
+    list.innerHTML = '';
+    menus.slice(listPage * LIST_PAGE_SIZE, (listPage + 1) * LIST_PAGE_SIZE).forEach(menu => {
+      const card = document.createElement('div');
+      card.className = 'list-card';
+      const modeText = menu.requiresSets ? `${menu.seconds}秒 / 1set・1人` : `${menu.seconds}秒 / 固定時間`;
+      card.innerHTML = `
+        <div>
+          <h3>${escapeHTML(menu.name)}</h3>
+          <p>${categoryName(menu.categoryId)} / ${modeText}</p>
+        </div>
+        <div class="list-actions">
+          <button class="mini-btn" data-edit="${menu.id}">編集</button>
+          <button class="mini-btn delete" data-delete="${menu.id}">消去</button>
+        </div>
+      `;
+      list.appendChild(card);
+    });
+    list.querySelectorAll('[data-edit]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        editingMenuId = btn.dataset.edit;
+        const m = findMenu(editingMenuId);
+        $('menuName').value = m.name;
+        $('menuSeconds').value = m.seconds;
+        addCategoryId = m.categoryId;
+        setFixedSwitch(!m.requiresSets);
+        showScreen('add');
+      });
+    });
+    list.querySelectorAll('[data-delete]').forEach(btn => {
+      btn.addEventListener('click', () => openDeleteModal(btn.dataset.delete));
+    });
+  }
+
+  function openDeleteModal(id) {
+    const menu = findMenu(id);
+    deleteTargetId = id;
+    $('confirmText').textContent = `「${menu.name}」を消去します。`;
+    $('confirmModal').classList.add('open');
+  }
+
+  function closeDeleteModal() {
+    $('confirmModal').classList.remove('open');
+    deleteTargetId = null;
+  }
+
+  function deleteMenu() {
+    if (!deleteTargetId) return;
+    state.menus = state.menus.filter(m => m.id !== deleteTargetId);
+    selectedMenuIds = selectedMenuIds.filter(id => id !== deleteTargetId);
+    setPlan = setPlan.filter(r => r.menuId !== deleteTargetId);
+    saveState();
+    closeDeleteModal();
+    renderListScreen();
+  }
+
+  function exportImage() {
+    const totals = calcTotals();
+    const rows = setPlan.map(row => ({ row, menu: findMenu(row.menuId) })).filter(x => x.menu);
+    const width = 1080;
+    const rowHeight = 96;
+    const height = Math.max(1350, 480 + rows.length * rowHeight + (totals.sets4 !== totals.sets5 ? 110 : 0));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#f7faf8';
+    ctx.fillRect(0, 0, width, height);
+    drawAbstractBackground(ctx, width, height);
+
+    ctx.fillStyle = '#0c5f2a';
+    ctx.font = '800 38px sans-serif';
+    ctx.fillText('練習メニュー', 70, 82);
+    ctx.fillStyle = '#16201a';
+    ctx.font = '900 64px sans-serif';
+    ctx.fillText(currentSheetTitle, 70, 172);
+
+    roundedRect(ctx, 60, 220, width - 120, 150, 30, '#ffffff', '#dce6df');
+    ctx.fillStyle = '#16201a';
+    ctx.font = '900 38px sans-serif';
+    ctx.fillText('合計', 100, 285);
+    ctx.font = '900 44px sans-serif';
+    ctx.fillStyle = '#17823b';
+    ctx.fillText(formatSeconds(totals.seconds), 240, 285);
+    ctx.fillStyle = '#6a756f';
+    ctx.font = '700 28px sans-serif';
+    ctx.fillText(`4人：${totals.sets4} set　5人：${totals.sets5} set　※5人基準`, 100, 335);
+
+    let y = 410;
+    rows.forEach((x, index) => {
+      const { row, menu } = x;
+      roundedRect(ctx, 60, y, width - 120, rowHeight - 12, 24, '#ffffff', '#dce6df');
+      ctx.fillStyle = '#17823b';
+      ctx.beginPath();
+      ctx.arc(105, y + 42, 25, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 28px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(String(index + 1), 105, y + 52);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#16201a';
+      ctx.font = '900 34px sans-serif';
+      ctx.fillText(menu.name, 150, y + 40);
+      ctx.font = '700 25px sans-serif';
+      ctx.fillStyle = '#6a756f';
+      if (menu.requiresSets) {
+        const rowSec = menu.seconds * row.sets5 * 5;
+        ctx.fillText(`4人 ${row.sets4} set / 5人 ${row.sets5} set / ${rowSec}秒`, 150, y + 72);
+      } else {
+        ctx.fillText(`固定時間 ${menu.seconds}秒`, 150, y + 72);
+      }
+      y += rowHeight;
+    });
+
+    if (totals.sets4 !== totals.sets5) {
+      roundedRect(ctx, 60, y + 10, width - 120, 96, 24, '#fff1f1', '#f0b6b6');
+      ctx.fillStyle = '#d94141';
+      ctx.font = '900 30px sans-serif';
+      ctx.fillText('注意', 100, y + 52);
+      ctx.fillStyle = '#9e2222';
+      ctx.font = '700 25px sans-serif';
+      ctx.fillText('4人と5人で合計セット数が異なります。', 190, y + 52);
+    }
+
+    lastImageDataUrl = canvas.toDataURL('image/png');
+    $('previewImg').src = lastImageDataUrl;
+    $('previewWrap').classList.add('open');
+  }
+
+  function roundedRect(ctx, x, y, w, h, r, fill, stroke) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  function drawAbstractBackground(ctx, width, height) {
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = '#17823b';
+    ctx.beginPath();
+    ctx.arc(width - 140, 80, 280, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(80, height - 100, 260, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  function downloadImage() {
+    if (!lastImageDataUrl) return;
+    const a = document.createElement('a');
+    a.href = lastImageDataUrl;
+    a.download = `${currentSheetTitle || 'training-menu'}.png`;
+    a.click();
+  }
+
+  function formatSeconds(totalSeconds) {
+    const total = Math.max(0, Math.round(Number(totalSeconds) || 0));
+    const min = Math.floor(total / 60);
+    const sec = total % 60;
+    return `${min}分 ${sec}秒`;
+  }
+
+  function escapeHTML(str) {
+    return String(str).replace(/[&<>'"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[ch]));
+  }
+
+  document.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => {
+    const target = btn.dataset.go;
+    if (target === 'add') resetAddForm();
+    showScreen(target);
+  }));
+
+  const createCategoryBtn = $('createCategoryBtn');
+  if (createCategoryBtn) createCategoryBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    $('createCategoryPanel').classList.toggle('open');
+  });
+  const addCategoryBtn = $('addCategoryBtn');
+  if (addCategoryBtn) addCategoryBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    $('addCategoryPanel').classList.toggle('open');
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.field-block')) closeDropdowns();
+  });
+  $('startSetBtn').addEventListener('click', startSetSelection);
+  $('fixedToggle').addEventListener('click', () => {
+    $('fixedSwitch').classList.toggle('on');
+    updateTimeLabel();
+  });
+  $('saveMenuBtn').addEventListener('click', saveMenu);
+  $('prevListPage').addEventListener('click', () => { if (listPage > 0) { listPage--; renderListScreen(); } });
+  $('nextListPage').addEventListener('click', () => { listPage++; renderListScreen(); });
+  $('exportImageBtn').addEventListener('click', exportImage);
+  $('cancelDelete').addEventListener('click', closeDeleteModal);
+  $('confirmDelete').addEventListener('click', deleteMenu);
+  $('closePreview').addEventListener('click', () => $('previewWrap').classList.remove('open'));
+  $('downloadImage').addEventListener('click', downloadImage);
+
+  renderCreateScreen();
+  renderAddScreen();
+  renderListScreen();
+})();
+</script>
+</body>
+</html>
+
+<!-- non-home compact typography adjustment -->
+<style>
+  .screen:not(#screen-home) .title {
+    font-size: clamp(24px, 7vw, 32px);
+    margin: 2px 0 4px;
+    letter-spacing: .05em;
+  }
+  .screen:not(#screen-home) .brand {
+    font-size: 14px;
+  }
+  .screen:not(#screen-home) .back {
+    width: 38px;
+    height: 38px;
+    font-size: 20px;
+  }
+  .screen:not(#screen-home) .label {
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+  .screen:not(#screen-home) .text-input,
+  .screen:not(#screen-home) .select-button,
+  .screen:not(#screen-home) .num-input {
+    min-height: 48px;
+    font-size: 14px;
+    border-radius: 14px;
+  }
+  .screen:not(#screen-home) .field-block {
+    margin-bottom: 12px;
+  }
+  .screen:not(#screen-home) .card {
+    padding: 14px;
+    border-radius: 20px;
+  }
+  .screen:not(#screen-home) .primary,
+  .screen:not(#screen-home) .secondary,
+  .screen:not(#screen-home) .danger-button {
+    min-height: 50px;
+    font-size: 16px;
+    border-radius: 15px;
+  }
+  .screen:not(#screen-home) .menu-row {
+    min-height: 50px;
+    padding: 8px 6px;
+  }
+  .screen:not(#screen-home) .row-name {
+    font-size: 15px;
+  }
+  .screen:not(#screen-home) .row-meta {
+    font-size: 10.5px;
+  }
+  .screen:not(#screen-home) .select-mark {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+  }
+  .screen:not(#screen-home) .fixed-pill {
+    font-size: 10px;
+    padding: 5px 8px;
+  }
+  #screen-sets .sub-title {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  #screen-sets .set-table th {
+    font-size: 13px;
+    padding: 9px 6px;
+  }
+  #screen-sets .set-table td {
+    padding: 9px 6px;
+  }
+  #screen-sets .set-name {
+    font-size: 12.5px;
+  }
+  #screen-sets .set-name small {
+    font-size: 10px;
+  }
+  #screen-sets .stepper {
+    width: 82px;
+    height: 34px;
+  }
+  #screen-sets .stepper span {
+    font-size: 12px;
+  }
+  #screen-sets .summary-card {
+    padding: 11px 13px;
+    border-radius: 17px;
+  }
+  #screen-sets .summary-grid {
+    font-size: 13px;
+    grid-template-columns: 74px 1fr;
+  }
+  #screen-sets .summary-grid .big {
+    font-size: 19px;
+  }
+  #screen-sets .note {
+    font-size: 10.5px;
+  }
+  #screen-sets .warning {
+    font-size: 11.5px;
+    padding: 8px 10px;
+  }
+  #screen-add .toggle-card h3 {
+    font-size: 14px;
+  }
+  #screen-add .toggle-card p {
+    font-size: 10.5px;
+  }
+  #screen-add .drop-item,
+  #screen-create .drop-item {
+    min-height: 40px;
+    font-size: 14px;
+  }
+  #screen-list .chip {
+    height: 34px;
+    font-size: 13px;
+    padding: 0 14px;
+  }
+  #screen-list .list-card {
+    padding: 11px 12px;
+    margin-bottom: 8px;
+  }
+  #screen-list .list-card h3 {
+    font-size: 15.5px;
+  }
+  #screen-list .list-card p {
+    font-size: 10.5px;
+  }
+  #screen-list .mini-btn {
+    min-width: 60px;
+    height: 30px;
+    font-size: 12px;
+  }
+</style>
+
+<style>
+  #screen-list .list-actions {
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: flex-end;
+  }
+  #screen-list .list-card {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  #screen-list .mini-btn {
+    min-width: 72px;
+  }
+</style>
+
+<style>
+  /* More compact menu list rows */
+  #screen-list .list-card {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px 10px !important;
+    margin-bottom: 6px !important;
+    border-radius: 14px !important;
+    min-height: 58px !important;
+  }
+  #screen-list .list-card h3 {
+    font-size: 14px !important;
+    line-height: 1.15 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #screen-list .list-card p {
+    font-size: 9.5px !important;
+    line-height: 1.15 !important;
+    margin-top: 3px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #screen-list .list-actions {
+    flex-direction: row !important;
+    gap: 5px !important;
+    flex-shrink: 0 !important;
+  }
+  #screen-list .mini-btn {
+    min-width: 50px !important;
+    height: 28px !important;
+    font-size: 11px !important;
+    border-radius: 9px !important;
+    padding: 0 7px !important;
+  }
+</style>
+
+<style>
+  /* Force Menu List to be an internal scroll box */
+  #screen-list #menuList {
+    flex: 0 0 auto !important;
+    height: clamp(250px, 46dvh, 330px) !important;
+    min-height: 0 !important;
+    overflow-y: scroll !important;
+    overscroll-behavior: contain !important;
+    background: rgba(255,255,255,.72) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 18px !important;
+    padding: 8px !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(23,130,59,.65) rgba(23,130,59,.08) !important;
+  }
+  #screen-list #menuList::-webkit-scrollbar {
+    width: 7px !important;
+  }
+  #screen-list #menuList::-webkit-scrollbar-track {
+    background: rgba(23,130,59,.08) !important;
+    border-radius: 999px !important;
+  }
+  #screen-list #menuList::-webkit-scrollbar-thumb {
+    background: rgba(23,130,59,.6) !important;
+    border-radius: 999px !important;
+  }
+</style>
+
+<style>
+  .category-box {
+    width: 100%;
+    min-height: 48px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 7px;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(23,130,59,.55) transparent;
+  }
+  .category-box::-webkit-scrollbar { height: 5px; }
+  .category-box::-webkit-scrollbar-thumb {
+    background: rgba(23,130,59,.45);
+    border-radius: 999px;
+  }
+  .category-box .chip {
+    height: 32px;
+    font-size: 12.5px;
+  }
+  .category-box .add-chip {
+    border-style: dashed;
+    color: var(--green);
+  }
+</style>

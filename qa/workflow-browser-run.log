@@ -1,0 +1,61 @@
+PASS startup separates login from workspace
+PASS LINE button disabled until configuration
+PASS demo opens real group selection, not fake LINE login
+PASS selecting a group opens existing five-tab home
+PASS account works outside group tab layout
+PASS display name saved without changing user id
+PASS new demo group has separate empty data
+PASS empty-group attendance handled
+PASS multiple groups available
+PASS original group preserved after switching
+PASS roster and operators clearly separated
+PASS operator permission picker saves selected scope
+PASS demo cannot mint a fake real invitation
+PASS invitation preview shows group and initial permission
+PASS demo invitation does not fabricate a LINE identity
+PASS carpool mode toggle always visible
+PASS split preserves both placements
+PASS split exposes explicit outbound and return tabs
+PASS return edit does not change outbound
+PASS merge asks which leg and never silently overwrites
+PASS explicit return selection merged both legs
+PASS merge undo restores split state
+PASS copy chooses source before mutating target
+PASS copy confirmation names source destination and exclusion
+PASS copy excludes absentees and keeps source immutable
+PASS copy preserves target price dates and reminders, clears personal adjustments
+PASS copy undo restores original target
+PASS table image action is discoverable and driver headings preserved
+PASS car image shows preview with distinct save and share
+PASS image preview has PNG payload
+PASS calendar retains executive overlay
+PASS executive overlay still projects task deadlines
+PASS calendar export defaults to club-only despite overlay
+PASS calendar export has deliberate audience in filename
+PASS new car controls honor monthly lock
+PASS new workflows no horizontal overflow 320 welcome
+PASS new workflows no horizontal overflow 320 groups
+PASS new workflows no horizontal overflow 320 account
+PASS new workflows no horizontal overflow 320 operators
+PASS new workflows no horizontal overflow 320 invite
+PASS new workflows no horizontal overflow 320 car/plan1
+PASS new workflows no horizontal overflow 320 car-copy-confirm/plan1/plan0
+PASS new workflows no horizontal overflow 320 calendar
+PASS new workflows no horizontal overflow 390 welcome
+PASS new workflows no horizontal overflow 390 groups
+PASS new workflows no horizontal overflow 390 account
+PASS new workflows no horizontal overflow 390 operators
+PASS new workflows no horizontal overflow 390 invite
+PASS new workflows no horizontal overflow 390 car/plan1
+PASS new workflows no horizontal overflow 390 car-copy-confirm/plan1/plan0
+PASS new workflows no horizontal overflow 390 calendar
+PASS new workflows no horizontal overflow 768 welcome
+PASS new workflows no horizontal overflow 768 groups
+PASS new workflows no horizontal overflow 768 account
+PASS new workflows no horizontal overflow 768 operators
+PASS new workflows no horizontal overflow 768 invite
+PASS new workflows no horizontal overflow 768 car/plan1
+PASS new workflows no horizontal overflow 768 car-copy-confirm/plan1/plan0
+PASS new workflows no horizontal overflow 768 calendar
+PASS no uncaught workflow errors
+60/60 pass

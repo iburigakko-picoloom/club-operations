@@ -1,0 +1,11 @@
+練習メニュー
+メニュー表作成
+メニュー一覧
+分類一覧
+練習メニュー履歴
+ホーム
+予定
+やること
+運営
+設定
+{'name': 'standalone HTML boots and opens native practice', 'pass': True, 'errors': [], 'limits': 'Direct injection; test-only Storage adapter, not native file navigation'}

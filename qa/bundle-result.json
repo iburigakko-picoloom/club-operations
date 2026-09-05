@@ -1,0 +1,6 @@
+{
+  "name": "standalone HTML boots and opens native practice",
+  "pass": true,
+  "errors": [],
+  "limits": "Direct injection; test-only Storage adapter, not native file navigation"
+}

@@ -1,0 +1,69 @@
+{
+  "version": "0.9",
+  "date": "2026-09-06",
+  "suites": [
+    {
+      "name": "既存サーバー",
+      "passed": 23,
+      "total": 23,
+      "evidence": "server-tests.txt"
+    },
+    {
+      "name": "LINE基盤・アカウント・招待",
+      "passed": 20,
+      "total": 20,
+      "evidence": "server-tests.txt"
+    },
+    {
+      "name": "計算・予定・配車ドメイン",
+      "passed": 23,
+      "total": 23,
+      "evidence": "domain-tests.txt"
+    },
+    {
+      "name": "既存の画面・操作",
+      "passed": 107,
+      "total": 107,
+      "evidence": "browser-results.json"
+    },
+    {
+      "name": "既存API連携",
+      "passed": 15,
+      "total": 15,
+      "evidence": "browser-server-results.json"
+    },
+    {
+      "name": "新しい画面・操作",
+      "passed": 60,
+      "total": 60,
+      "evidence": "workflow-browser-results.json"
+    },
+    {
+      "name": "招待・アカウントAPI連携",
+      "passed": 16,
+      "total": 16,
+      "evidence": "workflow-server-results.json"
+    },
+    {
+      "name": "タッチエミュレーション",
+      "passed": 1,
+      "total": 1,
+      "evidence": "touch-result.json"
+    },
+    {
+      "name": "配布HTML",
+      "passed": 1,
+      "total": 1,
+      "evidence": "bundle-result.json"
+    }
+  ],
+  "passed": 266,
+  "total": 266,
+  "limits": [
+    "Direct script injection with test Storage adapter",
+    "TestClient bridge is not browser networking or cookie policy verification",
+    "LINE API responses mocked; no real LINE login",
+    "No physical device, PWA install/update, Web Push receipt, or native OS sharing verification",
+    "Current calendar Site code not retrieved"
+  ]
+}
