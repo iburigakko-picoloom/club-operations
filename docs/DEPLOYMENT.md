@@ -2,6 +2,12 @@
 
 この版はPythonサーバー1台と永続SQLiteを使います。GitHubへのpushだけではサーバーは公開されません。HTTPSを提供し、永続ディスクを接続できるホストを使います。
 
+## Renderで共有版を作る
+
+[公開設定を開く](https://render.com/deploy?repo=https://github.com/manatocookietwitter-lang/club-operations) と同梱 `render.yaml` を使えます。Pythonサーバー1台、Starterプラン、1GB永続ディスク、シンガポール配置です。Renderで表示される料金を確認し、了承した上で作成します。無料Webサービスの一時ディスクへSQLiteを置く構成にはしません。
+
+公開直後はメール登録・ログインが利用可能で、LINEは無効です。表示されたHTTPS URLをPUBLIC_ORIGINとLINEコールバックに設定し、以下の手順でLINEを有効にします。共有版のURLはRenderのデプロイ成功後に確定します。
+
 ## LINE Developers側
 
 1. Webアプリ用のLINEログインチャネルを作成します。既存アカウントを引き継ぐ場合は同じチャネルを使います。

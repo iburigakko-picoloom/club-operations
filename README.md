@@ -1,5 +1,11 @@
 # 部活運営アプリ — 実装ベータ 0.9
 
+**[ブラウザーで操作版を開く](https://manatocookietwitter-lang.github.io/club-operations/)**
+
+公開中の操作版はサンプルデータ・端末内保存です。LINEログインと複数人でのデータ共有は含みません。
+
+共有版は [Renderで公開設定を開く](https://render.com/deploy?repo=https://github.com/manatocookietwitter-lang/club-operations) から設定できます。永続ディスクを利用する有料構成です。料金を確認してから作成してください。LINEは初期状態では無効で、公開後にチャネル設定が必要です。
+
 ## GitHub版の接続準備（2026-09-06）
 
 LINE認証の設定検証、IP単位の認可開始制限（10分に30回）、設定確認コマンド、Dockerfile、GitHub ActionsのAPI・計算テストを追加しました。LINEを有効にした状態で設定が不正な場合は起動を停止します。認可コードや招待リンクをアクセスログへ残さないよう、標準起動のアクセスログを無効にしています。

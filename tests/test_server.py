@@ -153,6 +153,7 @@ def test_finalized_snapshots_immutable_and_lock(env):
  u=account(env);s=populate(env,u,create(env,u));p=make_plan();r=patch(env,u,s,{'plans':[p]});assert r.status_code==200;s=r.json()
  snap={'id':'snap','month':module.now().date().strftime('%Y-%m'),'locked':True,'planIds':['p'],'lines':[],'revision':1}
  r=patch(env,u,s,{'settlements':[snap]});assert r.status_code==200;s=r.json()
+ assert patch(env,u,s,{'plans':[]}).status_code==409
  p=s['plans'][0];p['unitYen']=600
  assert patch(env,u,s,{'plans':[p]}).status_code==409
  edited=copy.deepcopy(snap);edited['revision']=99
@@ -160,6 +161,31 @@ def test_finalized_snapshots_immutable_and_lock(env):
  snap['locked']=False
  r=patch(env,u,s,{'settlements':[snap]});assert r.status_code==200;s=r.json()
  r=patch(env,u,s,{'plans':[p]});assert r.status_code==200
+
+
+@pytest.mark.parametrize('key,value',[
+ ('enabled',None),('enabled',{}),('enabled',{'outbound':1,'return':True}),
+ ('legs',None),('legs',{'outbound':{},'return':[]}),
+ ('need',None),('need',{'outbound':None,'return':{}}),
+])
+def test_invalid_plan_structure_not_persisted(env,key,value):
+ u=account(env);s=populate(env,u,create(env,u));p=make_plan();p[key]=value
+ assert patch(env,u,s,{'plans':[p]}).status_code==400
+ assert get(env,s['group']['id'])['plans']==[]
+
+
+def test_cancelled_plan_cancels_notifications(env):
+ u=account(env);s=populate(env,u,create(env,u))
+ e=copy.deepcopy(s['events'][0]);e['date']=(module.now().date()+module.timedelta(days=10)).isoformat()
+ p=make_plan();p['notifications']=['P1D']
+ r=patch(env,u,s,{'events':[e],'plans':[p]});assert r.status_code==200;s=r.json()
+ gid=s['group']['id']
+ with module.connect() as c:
+  assert c.execute("SELECT count(*) FROM jobs WHERE group_id=? AND status='pending'",(gid,)).fetchone()[0]==1
+ p['status']='cancelled'
+ assert patch(env,u,s,{'plans':[p]}).status_code==200
+ with module.connect() as c:
+  assert c.execute("SELECT count(*) FROM jobs WHERE group_id=? AND status='pending'",(gid,)).fetchone()[0]==0
 
 def test_calendar_role_cannot_change_rates(env):
  a=account(env);s=create(env,a);gid=s['group']['id'];token=env.post('/api/groups/'+gid+'/invite',headers=auth(a)).json()['token']

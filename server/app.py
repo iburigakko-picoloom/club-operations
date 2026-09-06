@@ -162,10 +162,14 @@ def validate(s,operators):
         if e['id'] in used_events:fail('この予定の配車はすでにあります')
         used_events.add(e['id']);number(p.get('unitYen'),0,1000000,True)
         if p.get('status') not in ['draft','registered','cancelled']:fail('配車状態を確認してください')
+        if not isinstance(p.get('enabled'),dict) or any(type(p['enabled'].get(leg)) is not bool for leg in ['outbound','return']):fail('往復の対象設定を確認してください')
+        if not isinstance(p.get('legs'),dict) or any(not isinstance(p['legs'].get(leg),list) for leg in ['outbound','return']):fail('配車の形式を確認してください')
+        if not isinstance(p.get('need'),dict) or any(not isinstance(p['need'].get(leg),dict) for leg in ['outbound','return']):fail('配車対象の形式を確認してください')
         for leg in ['outbound','return']:
             cars=p.get('legs',{}).get(leg,[]);seen=set();cids=set()
             if p.get('legDates',{}).get(leg) and not isdate(p['legDates'][leg]):fail('利用日を確認してください')
             for c in cars:
+                if not isinstance(c,dict) or not isinstance(c.get('riders'),list):fail('車の形式を確認してください')
                 if c.get('id') in cids:fail('車が重複しています')
                 cids.add(c.get('id'))
                 if c.get('pickup') not in ['university','station']:fail('配車区分を確認してください')
@@ -360,6 +364,7 @@ async def update_state(gid:str,req:Request):
         locked=set()
         for snap in old['settlements']:
             if snap.get('locked'):locked.update(snap.get('planIds',[]))
+        if (locked & set(prior_plans))-{p['id'] for p in s['plans']}:fail('精算確定済みの配車は削除できません。先に月の確定を解除してください',409)
         for p in s['plans']:
             prior=prior_plans.get(p['id'])
             if p['id'] in locked and p!=prior:fail('精算確定済みです。先に月の確定を解除してください',409)
@@ -462,7 +467,7 @@ def schedule_jobs(c,gid,s,old,operators,owner):
     es={x['id']:x for x in s['events']}
     for p in s['plans']:
         e=es[p['eventId']]
-        if e.get('cancelled'):continue
+        if e.get('cancelled') or p.get('status')=='cancelled':continue
         dt=datetime.fromisoformat(e['date']+'T'+(e.get('start') or '09:00')).replace(tzinfo=JST)
         add('car',dict(p,title='配車を確認'),s['roles'].get('配車',[])+[owner],dt,'car/'+p['id'],p.get('notifications',s['settings'].get('reminders',[])))
     old_notices={x['id']:x for x in old.get('notices',[])}
