@@ -5,9 +5,9 @@ const clubFlowPrefix='club-operations-line-pending-v1:';
 function clubPruneFlows(){try{for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if(!key?.startsWith(clubFlowPrefix))continue;let flow;try{flow=JSON.parse(localStorage.getItem(key));}catch{}if(!flow||!Number.isFinite(flow.createdAt)||Date.now()-flow.createdAt>600000)localStorage.removeItem(key);}}catch{}}
 function clubSaveFlow(flow){sessionStorage.setItem(clubFlowKey,JSON.stringify(flow));clubPruneFlows();try{localStorage.setItem(clubFlowPrefix+flow.state,JSON.stringify(flow));}catch{}}
 function clubTakeFlow(state){let flow;try{flow=JSON.parse(sessionStorage.getItem(clubFlowKey)||'null');}catch{}if(flow?.state===state)sessionStorage.removeItem(clubFlowKey);else{flow=null;try{flow=JSON.parse(localStorage.getItem(clubFlowPrefix+state)||'null');}catch{}}try{localStorage.removeItem(clubFlowPrefix+state);}catch{}clubPruneFlows();return flow;}
-function clubSession(){try{return sessionStorage.getItem(clubSessionKey)||'';}catch{return '';}}
-function clubRemember(token){sessionStorage.setItem(clubSessionKey,token);}
-function clubForget(){sessionStorage.removeItem(clubSessionKey);let flow;try{flow=JSON.parse(sessionStorage.getItem(clubFlowKey)||'null');}catch{}if(flow?.state){try{localStorage.removeItem(clubFlowPrefix+flow.state);}catch{}}sessionStorage.removeItem(clubFlowKey);}
+function clubSession(){try{const saved=localStorage.getItem(clubSessionKey);if(saved)return saved;}catch{}try{const legacy=sessionStorage.getItem(clubSessionKey)||'';if(legacy)clubRemember(legacy);return legacy;}catch{return '';}}
+function clubRemember(token){try{localStorage.setItem(clubSessionKey,token);sessionStorage.removeItem(clubSessionKey);}catch{sessionStorage.setItem(clubSessionKey,token);}}
+function clubForget(){try{localStorage.removeItem(clubSessionKey);}catch{}sessionStorage.removeItem(clubSessionKey);let flow;try{flow=JSON.parse(sessionStorage.getItem(clubFlowKey)||'null');}catch{}if(flow?.state){try{localStorage.removeItem(clubFlowPrefix+flow.state);}catch{}}sessionStorage.removeItem(clubFlowKey);}
 async function clubRequest(path,method,data,csrf){
  const base=window.CLUB_HOSTING?.apiBase||'/api';
  const token=window.CLUB_HOSTING?clubSession():'';
