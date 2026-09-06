@@ -4,7 +4,7 @@
 
 公開構成は **GitHub Pages＋Supabase Free** です。画面はGitHub Pages、ログイン・招待・編集権限の処理はSupabase Edge Functions、共有データは部活専用Postgresに置きます。Renderは使いません。公開検証の結果は [接続状況](docs/CONNECTION_STATUS.md) を参照してください。
 
-共有版ではメールで登録し、グループを作成して運営メンバーを招待できます。LINEログインはチャネル設定後に有効にします。[端末内保存のデモ](https://iburigakko-picoloom.github.io/club-operations/?demo) も残しています。
+共有版ではメールで登録し、グループを作成して運営メンバーを招待できます。LINEログインも接続・公開済みです。[端末内保存のデモ](https://iburigakko-picoloom.github.io/club-operations/?demo) も残しています。
 
 - [無料公開・構成](docs/FREE_HOSTING.md)
 - [LINE接続設定](docs/DEPLOYMENT.md)
