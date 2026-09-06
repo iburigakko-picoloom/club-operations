@@ -105,7 +105,6 @@ def add_months(d,n):
 def seed_attendance(s):
     start=now().date();end=add_months(start,3)
     for e in s['events']:
-        if 'done' in e and not isinstance(e['done'],bool):fail('完了状態を確認してください')
         if e.get('kind')!='club' or e.get('cancelled') or not start.isoformat()<=e['date']<=end.isoformat(): continue
         for p in s['people']:
             if p.get('active',True) and p.get('joinedDate','0000')<=e['date']:
@@ -139,6 +138,7 @@ def validate(s,operators):
         if p.get('seniority') not in ['above','below'] or p.get('pickup') not in ['university','station']:fail('部員の区分を確認してください')
         if p.get('defaultOverride') not in [None,True,False]:fail('参加設定を確認してください')
     for e in es.values():
+        if 'done' in e and not isinstance(e['done'],bool):fail('完了状態を確認してください')
         text(e.get('title'),200,True)
         if e.get('kind') not in ['club','executive'] or not isdate(e.get('date')):fail('予定の日時を確認してください')
         ed=e.get('endDate') or e['date']

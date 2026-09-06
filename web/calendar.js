@@ -37,7 +37,7 @@ window.addEventListener('click',ev=>{
   if(clubCalendar.selecting){clubCalendar.selected.has(date)?clubCalendar.selected.delete(date):clubCalendar.selected.add(date);render();return;}
   const items=calItems(date);
   if(!edit('events')){go('day/'+date);return;}
-  if(!items.length)calEditor({date});else if(items.length===1&&items[0].type==='event')calEditor({id:items[0].id});else modal(jpDate(date,true),items.map(x=>x.type==='event'?action('cal-edit',`${esc(x.time||'時刻なし')}　${esc(x.title)}`,`data-id="${esc(x.id)}"`,'row'):`<a class="row" href="#task/${esc(x.id)}" data-act="close-modal">${esc(x.title)}</a>`).join('')+action('cal-new-day','＋ 予定を追加',`data-date="${date}"`,'secondary full'));break;
+  if(!items.length)calEditor({date});else if(items.length===1&&items[0].type==='event')calEditor({id:items[0].id});else modal(jpDate(date,true),items.map(x=>x.type==='event'?action('cal-edit',`${x.kind!=='club'&&x.time?esc(x.time)+'　':''}${esc(x.title)}`,`data-id="${esc(x.id)}"`,'row'):`<a class="row" href="#task/${esc(x.id)}" data-act="close-modal">${esc(x.title)}</a>`).join('')+action('cal-new-day','＋ 予定を追加',`data-date="${date}"`,'secondary full'));break;
  }
  case'cal-add':calChoices();break;
  case'cal-mode':if(mode==='multiple'){closeModal();calClear();clubCalendar.selecting=true;render();}else calEditor({mode});break;
