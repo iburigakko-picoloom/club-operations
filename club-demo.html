@@ -252,7 +252,7 @@ button:not(:disabled):active,.primary:active,.secondary:active{transform:scale(.
 .op-add-car{flex:0 0 80px;color:#256d3e;border:1px dashed #cad8ce;background:white;min-height:180px}
 .op-pool{padding:8px 10px;margin-top:12px;border-top:1px solid #dde4df}.op-pool.has-missing{background:#fff5f5;border:1px solid #efd4d4;border-radius:4px;color:#a43434}
 .op-pool h3{margin:0 0 8px}.op-pool-group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.op-pool-group>span{font-size:12px}.op-pool-group>div{display:flex;flex-wrap:wrap;gap:5px;flex:1}
-.op-pool .person,.op-optional .person{width:auto;min-width:70px;padding:6px 10px;min-height:36px}.op-pool .person.needed{color:#a43434;background:#fde8e8}.op-car-editor .person.selected{outline:2px solid #14813b;background:#eaf6ed}
+.op-pool .person,.op-optional .person{width:auto;min-width:70px;padding:6px 10px;min-height:36px}.op-pool .person.needed{color:var(--text);background:#fde8e8}.op-car-editor .person.selected{outline:2px solid #14813b;background:#eaf6ed}
 .op-optional{margin-top:14px}.op-optional summary{font-size:13px}.op-error{color:#a43434}.memo-text{white-space:pre-wrap}
 .op-car-editor .drop-over{background:#e1f1e5!important;outline:2px solid #14813b}
 body[data-screen="car"] .app{max-width:1100px}
@@ -271,7 +271,7 @@ body[data-screen="car"] .app{max-width:1100px}
 .op-people-strip{display:flex;gap:16px;overflow-x:auto;overflow-y:hidden;padding:0 0 5px;height:auto;min-height:0;flex:1;touch-action:pan-x;overscroll-behavior-x:contain}
 .op-people-group{display:flex;flex-direction:column;flex:0 0 auto;gap:6px;min-height:0}.op-people-group>span{font-size:11px;color:#68776d}
 .op-people-grid{display:grid;flex:1;min-height:0;grid-template-rows:repeat(3,minmax(44px,1fr));grid-auto-flow:column;grid-auto-columns:108px;gap:6px}
-.op-pool .op-people-grid .person{min-width:0;width:108px;min-height:44px;height:100%;padding:6px 8px;background:#f3f5f3}.op-pool .op-people-grid .person.needed{background:#fde8e8}.op-pool .person-name{font-size:16px}
+.op-pool .op-people-grid .person{color:var(--text);min-width:0;width:108px;min-height:44px;height:100%;padding:6px 8px;background:#f3f5f3}.op-pool .op-people-grid .person.needed{background:#fde8e8}.op-pool .person-name{font-size:16px}
 @media(max-height:720px){.op-car-editor>.wf-mode-switch button{min-height:34px}.op-car-editor{gap:4px}.op-car-editor>.op-pool{padding:5px 8px}}
 .cal-day.cal-drop-over{outline:3px solid #14813b;outline-offset:-3px;background:#e4f3e8!important}.cal-event{touch-action:pan-y;-webkit-touch-callout:none}.op-car-editor>.op-car-title{padding-bottom:4px}
 .header .op-header-title{min-width:0;font-size:15px;line-height:1.25}.op-header-title small{display:block;font-size:11px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
@@ -1306,7 +1306,7 @@ function opDragMove(x,y){opDrag.x=x;opDrag.y=y;opGhost.style.transform=`translat
 function opDragScroll(){if(!opDrag)return;const hit=document.elementFromPoint(opDrag.x,opDrag.y),pane=hit?.closest('[data-car-scroll]');if(pane){const r=pane.getBoundingClientRect();if(opDrag.x<r.left+32)pane.scrollLeft-=9;if(opDrag.x>r.right-32)pane.scrollLeft+=9;document.querySelectorAll('.drop-over').forEach(e=>e.classList.remove('drop-over'));opDrag.target=document.elementFromPoint(opDrag.x,opDrag.y)?.closest('[data-drop]');opDrag.target?.classList.add('drop-over');}opFrame=requestAnimationFrame(opDragScroll);}
 window.addEventListener('pointerdown',ev=>{
  const el=ev.target.closest('[data-person]');if(!el||getRoute()[0]!=='car')return;ev.stopImmediatePropagation();if(ev.pointerType==='touch')return;if(el.disabled||ev.button!==0||ctx.busy||!edit('plans')||lockedPlan(getRoute()[1]))return;
- opDragClean();opHold={el,mid:el.dataset.person,id:ev.pointerId,x:ev.clientX,y:ev.clientY};opHold.mouse=ev.pointerType==='mouse';opHold.timer=setTimeout(opDragStart,220);
+ opDragClean();opHold={el,mid:el.dataset.person,id:ev.pointerId,x:ev.clientX,y:ev.clientY};opHold.mouse=ev.pointerType==='mouse';opHold.timer=setTimeout(opDragStart,150);
 },true);
 window.addEventListener('pointermove',ev=>{if(!opHold||opHold.touch||ev.pointerId!==opHold.id)return;ev.stopImmediatePropagation();if(!opDrag){if(Math.hypot(ev.clientX-opHold.x,ev.clientY-opHold.y)<=10)return;if(opHold.mouse)opDragStart();else{opDragClean();return;}}ev.preventDefault();opDragMove(ev.clientX,ev.clientY);},{capture:true,passive:false});
 // Touch owns its gesture so native horizontal panning cannot cancel a held name.
@@ -1314,7 +1314,7 @@ window.addEventListener('touchstart',ev=>{
  const el=ev.target.closest('[data-person]');if(!el||getRoute()[0]!=='car')return;
  if(ev.touches.length!==1){opDragClean();return;}
  if(el.disabled||ctx.busy||!edit('plans')||lockedPlan(getRoute()[1]))return;
- const t=ev.touches[0];opDragClean();opHold={el,mid:el.dataset.person,id:t.identifier,x:t.clientX,y:t.clientY,touch:true};opHold.timer=setTimeout(opDragStart,220);
+ const t=ev.touches[0];opDragClean();opHold={el,mid:el.dataset.person,id:t.identifier,x:t.clientX,y:t.clientY,touch:true};opHold.timer=setTimeout(opDragStart,150);
 },{capture:true,passive:false});
 window.addEventListener('touchmove',ev=>{
  if(!opHold?.touch)return;const t=Array.from(ev.touches).find(t=>t.identifier===opHold.id);if(!t)return;
