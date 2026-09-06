@@ -14,4 +14,6 @@ GitHub Pagesでは端末内保存の操作版を公開。共有版はRender Free
 
 無料版では休止中の通知を保証できないためPush送信を無効化。LINEはチャネル設定前のため無効。Postgresでも同じAPIテストを実行するCIを追加した。
 
+無料構成の検証：SQLite 61件、Postgres 61件、Node 23件がGitHub Actionsで成功。Supabaseの実DBでも業務API31件と認証30件を確認し、セキュリティAdvisorは指摘なし。テスト専用スキーマは検証後に削除し、本番用スキーマにはテストアカウントを残していない。
+
 `qa/`と`QA_REPORT.md`は提供元の過去の検証記録、`docs/FILE_HASHES.json`は元ZIPのハッシュ目録。現GitHub版全体の最新結果・最新ハッシュとして扱わない。
