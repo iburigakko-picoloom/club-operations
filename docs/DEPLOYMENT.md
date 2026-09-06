@@ -8,7 +8,7 @@
 2. LINEログイン設定のコールバックURLに次のURLを登録します（末尾の `/` を含む）。
 
 ```text
-https://manatocookietwitter-lang.github.io/club-operations/
+https://iburigakko-picoloom.github.io/club-operations/
 ```
 
 3. Supabaseの部活専用プロジェクト → Edge Functions → Secretsへ `LINE_CHANNEL_ID`、`LINE_CHANNEL_SECRET` を登録し、`LINE_LOGIN_ENABLED=1` を設定します。シークレットをGitHub・画面ソース・チャットへ書きません。

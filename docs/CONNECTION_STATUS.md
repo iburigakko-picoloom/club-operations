@@ -4,7 +4,7 @@ GitHub Pages＋Supabaseの共有版へ移行しました。Edge Function v2の�
 
 ローカル検証：Python 61件、Node 38件成功。Denoのエントリーポイント型チェック成功。Nodeの追加テストは権限・配車・精算ロック・LINEの検証済みクレーム・招待トークンとログイン情報の区別を含みます。
 
-GitHub ActionsでもPython／Postgres／Edgeの全ジョブが成功しました。Edgeの実ハンドラーを隔離Postgresへ接続し、登録・共有・CAS・招待・権限・ログアウトのAPI検証に成功しています。[検証結果](https://github.com/manatocookietwitter-lang/club-operations/actions/runs/34007561417)。ローカルブラウザーでデモのログイン入口・グループ選択を確認しました。
+GitHub ActionsでもPython／Postgres／Edgeの全ジョブが成功しました。Edgeの実ハンドラーを隔離Postgresへ接続し、登録・共有・CAS・招待・権限・ログアウトのAPI検証に成功しています。[検証結果](https://github.com/iburigakko-picoloom/club-operations/actions/runs/34007561417)。ローカルブラウザーでデモのログイン入口・グループ選択を確認しました。
 
 DBは部活専用の非公開スキーマです。匿名公開はしていません。SupabaseセキュリティAdvisorは指摘なし。
 

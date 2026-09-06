@@ -5,7 +5,7 @@ export const random=(n=32)=>randomBytes(n).toString('hex');
 const sec=()=>Date.now()/1000;
 export const safeEqual=(a,b)=>{if(typeof a!=='string'||typeof b!=='string')return false;const aa=new TextEncoder().encode(a),bb=new TextEncoder().encode(b);return aa.length===bb.length&&timingSafeEqual(aa,bb);};
 function hashPassword(password,salt=random(16)){return salt+':'+scryptSync(password,salt,64,{N:16384,r:8,p:1}).toString('hex');}
-export const APP_URL='https://manatocookietwitter-lang.github.io/club-operations/';
+export const APP_URL='https://iburigakko-picoloom.github.io/club-operations/';
 export const APP_ORIGIN=new URL(APP_URL).origin;
 
 // The database callback always runs inside a transaction as club_runtime.

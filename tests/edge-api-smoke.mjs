@@ -6,7 +6,7 @@ import {writeFile} from 'node:fs/promises';
 const base=process.env.CLUB_API_URL;if(!base)throw Error('Set CLUB_API_URL explicitly');
 const run=randomBytes(8).toString('hex'),password=randomBytes(24).toString('hex'),emails=[`qa-${run}-a@club-qa.invalid`,`qa-${run}-b@club-qa.invalid`],users=[],groups=[];let checks=0;
 const record=()=>writeFile('.edge-test-run.json',JSON.stringify({run,emails,users,groups},null,2));await record();
-const origin='https://manatocookietwitter-lang.github.io';
+const origin='https://iburigakko-picoloom.github.io';
 async function call(path,method='GET',data,session,expected=200,extra={}){
  const r=await fetch(base+path,{method,headers:{Origin:origin,'Content-Type':'application/json',...(session?{Authorization:'Bearer '+session.token,'X-CSRF-Token':session.csrf}:{}),...extra},body:data===undefined?undefined:JSON.stringify(data)});let b;try{b=await r.json();}catch{b={detail:'Non-JSON response'};}assert.equal(r.status,expected,`${method} ${path}: ${JSON.stringify(b)}`);assert.equal(r.headers.get('cache-control'),'no-store');checks++;return b;
 }

@@ -1,10 +1,10 @@
 # 部活運営アプリ
 
-**[アプリを開く](https://manatocookietwitter-lang.github.io/club-operations/)**
+**[アプリを開く](https://iburigakko-picoloom.github.io/club-operations/)**
 
 公開構成は **GitHub Pages＋Supabase Free** です。画面はGitHub Pages、ログイン・招待・編集権限の処理はSupabase Edge Functions、共有データは部活専用Postgresに置きます。Renderは使いません。公開検証の結果は [接続状況](docs/CONNECTION_STATUS.md) を参照してください。
 
-共有版ではメールで登録し、グループを作成して運営メンバーを招待できます。LINEログインはチャネル設定後に有効にします。[端末内保存のデモ](https://manatocookietwitter-lang.github.io/club-operations/?demo) も残しています。
+共有版ではメールで登録し、グループを作成して運営メンバーを招待できます。LINEログインはチャネル設定後に有効にします。[端末内保存のデモ](https://iburigakko-picoloom.github.io/club-operations/?demo) も残しています。
 
 - [無料公開・構成](docs/FREE_HOSTING.md)
 - [LINE接続設定](docs/DEPLOYMENT.md)
@@ -31,7 +31,7 @@ LINE認証のサーバー経路は用意しましたが、接続設定は無効�
 - `docs/IMPLEMENTATION_STATUS.md`：実装範囲と未完了部分。
 
 前回の「仕様書を他モデルへ渡す」一式ではありません。画面と処理を実装しています。
-練習メニューは公開GitHub `manatocookietwitter-lang/training-menu-app` の `main`（確認時HEAD `53d7258`）と再照合し、`b9466eb` の3段階フロー、`セットあり/1回のみ`、分類・履歴編集モード、削除Undo、画像保存時の履歴追加まで統合しました。予定Siteは公開URLを特定済みですが、この実行環境からSiteの現在ソースを直接取得できないため、コード単位の完全差分は未完了です。
+練習メニューは公開GitHub `iburigakko-picoloom/training-menu-app` の `main`（確認時HEAD `53d7258`）と再照合し、`b9466eb` の3段階フロー、`セットあり/1回のみ`、分類・履歴編集モード、削除Undo、画像保存時の履歴追加まで統合しました。予定Siteは公開URLを特定済みですが、この実行環境からSiteの現在ソースを直接取得できないため、コード単位の完全差分は未完了です。
 
 ## Windowsで起動
 
