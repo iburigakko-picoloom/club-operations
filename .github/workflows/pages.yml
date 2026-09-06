@@ -1,4 +1,4 @@
-name: Publish browser demo
+name: Publish shared app
 on:
   push:
     branches: [main]
@@ -28,7 +28,8 @@ jobs:
       - run: |
           python tools/build_demo.py
           mkdir -p _site
-          cp club-demo.html _site/index.html
+          cp -r web/. _site/
+          cp club-demo.html _site/demo.html
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

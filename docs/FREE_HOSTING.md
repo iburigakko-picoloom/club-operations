@@ -1,30 +1,33 @@
-# 無料の共有版
+# GitHub Pages＋Supabaseの無料公開
 
-構成：GitHubでソース管理、Render FreeでFastAPIと画面を公開、Supabase FreeのPostgresに共有データを保存します。GitHub Pagesの操作デモは別に残します。
+画面：GitHub Pages。サーバー処理：Supabase Edge Functions。保存先：部活専用Supabase Postgres。Renderや有料ディスクは不要です。
 
-## 初期設定
+## 公開するもの
 
-1. 専用のSupabase Freeプロジェクトを作成します。別アプリのプロジェクトを共用しません。
-2. DB管理者として `server/postgres_schema.sql` を適用します。テーブルは非公開の `club` スキーマ、サーバー専用 `club_runtime` ロールだけに読み書き権限を付けます。全テーブルでRLSを有効にし、anon/authenticatedには権限を付けません。
-3. `club_runtime` に十分長いランダムパスワードを設定し、Connect画面のSession pooler（5432番）を使って接続します。アプリは起動時にテーブルを作成せず、設定済みのスキーマを確認します。
-4. Renderで同梱Blueprintを開き、DATABASE_URLに接続文字列を登録します。これは秘密値です。コード・GitHub・フロントエンドへ含めません。
-5. Freeプラン・有料ディスクなしを確認して公開します。
-6. 公開URLをPUBLIC_ORIGINに設定します。LINE用チャネルを用意後、別途LINEを有効にします。
+- Pagesは `web/` だけを配信します。DB接続情報、LINEシークレット、サーバーソース、テストファイルはPagesに配信しません。
+- `web/hosting.js` は公開APIのURLだけです。アプリのセッショントークンはsessionStorageに保存し、HTTPSのAuthorizationヘッダーで送ります。タブを閉じた後は再ログインが必要です。
+- データを更新するときはセッションとCSRFトークンを確認し、許可したPagesのOriginだけを受け付けます。Cookieの外部サイト制限には依存しません。
+- グループ所属と編集権限はサーバー側で確認します。古いversionによる更新は409で拒否します。
+- DBは非公開の `club` スキーマ。全テーブルでRLSを有効にし、anon/authenticatedへ公開しません。
 
-接続形式（パスワードはURLエンコード）：
+## 初期設定・更新
 
-```text
-postgresql://club_runtime.PROJECT_REF:PASSWORD@SESSION_POOLER_HOST:5432/postgres?sslmode=require
-```
+1. 部活専用Freeプロジェクトへ `server/postgres_schema.sql` を適用します。既存の別アプリのプロジェクトには適用しません。
+2. サーバーの権限切替用に `supabase/runtime-role.sql` を適用します。Edge Functionは標準の `SUPABASE_DB_URL` で接続し、すべてのDB処理をトランザクション内の `SET LOCAL ROLE club_runtime` で制限します。DBパスワードを別サービスへ渡す必要はありません。
+3. `supabase/functions/club-api/` を `club-api` としてデプロイします。依存はdeno.jsonとdeno.lockで固定します。独自セッションを検証するため、プラットフォーム側JWT検証は無効、アプリ側認証は必須です。登録など一部の入口だけ未ログインで使えます。
+4. APIの実接続テストを通し、GitHub Pagesを `web/` 配信に切り替えます。API変更があるときはサーバーを先にデプロイします。GitHub ActionsはテストとPages公開を行い、Edge Functionsの自動デプロイ用アクセストークンはGitHubへ登録していません。
+5. LINEは [DEPLOYMENT.md](DEPLOYMENT.md) に沿って設定します。
 
-更新はDB内のトランザクションと排他ロックで直列化し、従来のversion照合で古い編集を拒否します。サーバーのDBロールにはスキーマ変更や他スキーマの管理権限を与えません。
+## 無料枠と現在の範囲
 
-## 無料枠の制約
+- Supabase FreeはDB 500MB、アクティブプロジェクト2件まで。1週間の非利用で休止する条件があります。関数呼出回数・転送量にも上限があります。有料への切替は行っていません。
+- 自動Push通知は未接続のため無効です。予定や出欠などの共有・保存、LINEログインとは別の機能です。
+- メールはアカウント識別子として使用し、メール確認やパスワード再設定メールは送信しません。
+- JSON書き出しと管理者のpg_dumpをバックアップに使用します。無料DBの自動バックアップは含まれません。
+- ローカルのデモ／旧SQLiteのデータを、共有グループへ自動アップロードすることはありません。
 
-- Render Freeは15分アクセスがないと休止します。再アクセス時には起動待ちがあります。月750時間枠はワークスペース内で共有されます。
-- Supabase Freeは500MBのDB、アクティブプロジェクト2件まで。1週間の非利用で休止する場合があります。無料枠の上限を超える運用では設定を見直します。有料へ自動変更する設定はしません。
-- サーバー停止中に定刻の通知を送れないため、`PUSH_WORKER_ENABLED=0` でPush送信を無効にします。LINEログインとは別の制限です。
-- 無料DBに自動バックアップは含まれません。業務データのJSON書き出しと、管理者による `pg_dump` バックアップを使います。SQLite用backupコマンドはPostgresでは使いません。
-- PostgreSQLへの変更は新規の共有版向けです。既存SQLiteの自動移行は行いません。
+## 検証方法
 
-公式資料（2026-09-06確認）：[Render Free](https://render.com/docs/free)、[Supabase料金と無料枠](https://supabase.com/pricing)、[DB接続](https://supabase.com/docs/guides/database/connecting-to-postgres)。
+`node --test tests/domain.test.cjs tests/edge-domain.test.mjs tests/transport.test.cjs` で計算・権限・精算ロック・LINE検証・画面の認証情報管理を確認します。`CLUB_API_URL` を明示して `node tests/edge-api-smoke.mjs` を実行すると、検証用アカウント2件で実APIの保存・招待・権限・ログアウトを確認します。実環境では `.edge-test-run.json` に記録した検証IDだけを終了後に削除します。CIは隔離したPostgresを使用します。
+
+公式（2026-09-06確認）：[Supabase無料枠](https://supabase.com/pricing)、[Edge Functions](https://supabase.com/docs/guides/functions)、[DB接続](https://supabase.com/docs/guides/functions/connect-to-postgres)。

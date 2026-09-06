@@ -1,63 +1,29 @@
-# LINEログインの接続手順
+# LINEログインの接続
 
-無料公開はPythonサーバー1台と外部Postgresを使います。ローカル起動時はSQLiteも使えます。現在の標準公開手順は [FREE_HOSTING.md](FREE_HOSTING.md) です。以下のDocker例は永続SQLiteで運用する場合の補足です。
+現在の公開構成はGitHub Pages＋Supabase Edge Functionsです。チャネル設定がない間もメールで登録・ログインできます。
 
-## Renderで共有版を作る
+## LINE Developers
 
-[公開設定を開く](https://render.com/deploy?repo=https://github.com/manatocookietwitter-lang/club-operations) と同梱 `render.yaml` を使えます。Pythonサーバー1台、Freeプラン、シンガポール配置です。保存先はSupabaseの無料Postgresです。DATABASE_URLが未設定なら起動を停止し、一時ディスクへの保存に切り替わらないようにしています。
-
-公開直後はメール登録・ログインが利用可能で、LINEは無効です。表示されたHTTPS URLをPUBLIC_ORIGINとLINEコールバックに設定し、以下の手順でLINEを有効にします。共有版のURLはRenderのデプロイ成功後に確定します。
-
-## LINE Developers側
-
-1. Webアプリ用のLINEログインチャネルを作成します。既存アカウントを引き継ぐ場合は同じチャネルを使います。
-2. LINEログイン設定のコールバックURLに `https://公開ドメイン/api/auth/line/callback` を登録します。
-3. 開発中のチャネルは利用者の権限を設定してテストします。公開ステータスへの変更は実接続確認後に判断します。
-4. チャネルIDとチャネルシークレットをホストの環境変数へ設定します。シークレットはGitHubのファイル・チャット・フロントエンドへ書きません。
-
-利用スコープは `openid profile`。PKCE S256、state、nonce、IDトークン検証を使用します。
-
-公式資料：[Webアプリへの組み込み](https://developers.line.biz/ja/docs/line-login/integrate-line-login/)、[PKCE](https://developers.line.biz/ja/docs/line-login/integrate-pkce/)。
-
-## サーバー側
-
-以下をホストの環境変数として注入します。
+1. 部活用のWebアプリ対応LINEログインチャネルを作成します。
+2. LINEログイン設定のコールバックURLに次のURLを登録します（末尾の `/` を含む）。
 
 ```text
-PUBLIC_ORIGIN=https://公開ドメイン
-COOKIE_SECURE=1
-LINE_LOGIN_ENABLED=1
-LINE_CHANNEL_ID=チャネルID
-LINE_CHANNEL_SECRET=ホストの秘密設定から注入
-LINE_REDIRECT_URI=https://公開ドメイン/api/auth/line/callback
-PASSWORD_LOGIN_ENABLED=1
-CLUB_DB=/data/club.sqlite3
+https://manatocookietwitter-lang.github.io/club-operations/
 ```
 
-PUBLIC_ORIGINはHTTPSの標準ポート443、パス・認証情報・クエリ・フラグメントなし。`.env.example`を置くだけではPythonに読み込まれません。Dockerの `--env-file` またはホストの環境変数設定を利用してください。
+3. Supabaseの部活専用プロジェクト → Edge Functions → Secretsへ `LINE_CHANNEL_ID`、`LINE_CHANNEL_SECRET` を登録し、`LINE_LOGIN_ENABLED=1` を設定します。シークレットをGitHub・画面ソース・チャットへ書きません。
+4. 開発中はチャネルのテスト権限を持つ利用者で確認します。一般の運営メンバーにも使ってもらうには、チャネルの公開設定も必要です。
 
-コンテナー利用時の例（先に `.env` を実環境の値で用意）：
+## 認証の流れ
 
-```sh
-docker build -t club-operations .
-docker volume create club-data
-docker run --rm --env-file .env club-operations python -m server.check_config
-docker run -d --name club-operations --restart unless-stopped --env-file .env -v club-data:/data -p 127.0.0.1:8765:8765 club-operations
-```
+ブラウザーがランダムなフロー確認値を生成し、タブ内のsessionStorageに保存します。Edge Functionはstate・nonce・PKCE検証値と確認値のハッシュを10分間DBに保管します。LINEから画面へ戻るとstateを照合し、認可コードをアドレス欄から除いてサーバーへ送ります。
 
-コンテナーはUID 10001の非rootユーザーで動きます。ホストのディレクトリをバインドマウントする場合は、このUIDがDBディレクトリへ書き込めるよう設定します。上記の名前付きボリューム例は同梱Dockerfileの初期所有権を使います。
+サーバーでフローの有効期限・確認値・単回利用を検証し、LINEの固定HTTPSエンドポイントでコード交換とIDトークン検証を行います。iss/aud/nonce/exp/iat/subを照合します。LINEのアクセストークンやチャネルシークレットをブラウザーへ返しません。アプリ独自のセッションはDBへハッシュだけを保存します。
 
-HTTPSリバースプロキシを8765番へ接続します。LINEの開始制限はサーバーが認識した接続元IPごとに10分30回です。プロキシを使う場合、ホスト構成に応じて `FORWARDED_ALLOW_IPS` を実際の信頼済みプロキシIPだけに設定し、プロキシ側で転送ヘッダーを正規化してください。未設定では全利用者が同一IPとして扱われる場合があります。無条件の `*` 信頼は使いません。
+既存アカウントの連携は、ログイン済みのアカウント画面から開始します。他アカウントのLINEを自動統合しません。連携の完了時にもアプリセッションとCSRFトークンを再確認します。
 
-同梱起動方法はuvicornのアクセスログを無効にしています。プロキシ・ホスト側にも認証コールバックのクエリや `/api/invites/` のトークンを記録させない設定が必要です。参考：[Uvicorn設定](https://www.uvicorn.org/settings/)。
+## 検証
 
-## 接続確認
+新規ログイン、キャンセル、期限切れ・別タブ、再利用、既存アカウント連携、別アカウントへの重複連携拒否、招待リンクからの参加を確認してください。自動テストのLINE応答はモックで、実チャネルによる認証往復の代わりにはなりません。
 
-1. ホスト上で `python -m server.check_config` が成功することを確認します。これは設定の形式検証で、LINEへの疎通試験ではありません。
-2. 公開URLの `/api/config` で `lineLogin: true` を確認します。
-3. 実ブラウザーでLINEログイン→LINEの同意画面→アプリのグループ選択へ戻ることを確認します。
-4. ログアウト、キャンセル、再試行、既存アカウントからのLINE連携、招待先への参加を確認します。
-5. 既存オーナーがLINE連携で同じグループへ戻れるまで、メールログインは無効にしません。
-6. サーバー再起動後も所属・業務データが残ることと、バックアップから復元できることを確認します。
-
-GitHub Actionsは外部LINE APIをモックしたテストです。実LINEログインやスマートフォン検証の代わりにはなりません。Dockerビルド・HTTPS・実LINE認証は実ホストで確認する必要があります。
+公式：[LINE Webログイン](https://developers.line.biz/ja/docs/line-login/integrate-line-login/)、[PKCE](https://developers.line.biz/ja/docs/line-login/integrate-pkce/)、[Supabase秘密設定](https://supabase.com/docs/guides/functions/secrets)。

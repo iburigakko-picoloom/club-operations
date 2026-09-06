@@ -39,9 +39,9 @@ async function wfSwitchGroup(gid){
 switchGroup=wfSwitchGroup;
 function wfWelcome(){
  const enabled=ctx.mode==='server'&&ctx.pushConfig.lineLogin;
- return wfPage('部活運営',`<div class="wf-intro"><h2>ログイン</h2><p>LINEでログインして、使うグループを選びます。</p></div>
+ return wfPage('部活運営',`<div class="wf-intro"><h2>ログイン</h2><p>ログインして、使うグループを選びます。</p></div>
  ${wf.loginError?`<div class="warning" role="alert">${esc(wf.loginError)}</div>`:''}
- <div class="wf-stack">${enabled?'<a class="primary full wf-line" href="/api/auth/line/start">LINEでログイン</a>':'<button class="primary full wf-line" disabled>LINEでログイン</button><p class="note">LINEログインは接続設定前です。</p>'}
+ <div class="wf-stack">${enabled?'<a class="primary full wf-line" href="#welcome" data-act="wf-line-login">LINEでログイン</a>':'<button class="primary full wf-line" disabled>LINEでログイン</button><p class="note">LINEログインは接続設定前です。</p>'}
  ${sessionStorage.getItem('club-invite')?'<p class="wf-callout">招待を受け取っています。ログイン後に参加先を確認します。</p>':''}
  ${(ctx.mode==='demo'||ctx.pushConfig.passwordLogin)?`<details class="wf-password" ${wf.emailOpen?'open':''}><summary>メールでログイン・既存アカウント</summary>${segments([['login','ログイン'],['register','新規登録']],ctx.authTab,'auth-tab')}<form data-form="wf-auth">${ctx.authTab==='register'?field('表示名','name','','text','required maxlength="80" autocomplete="name"'):''}${field('メール','email','','email','required autocomplete="email"')}${field('パスワード','password','','password',`required minlength="10" maxlength="256" autocomplete="${ctx.authTab==='register'?'new-password':'current-password'}"`)}<button class="secondary full" ${ctx.mode==='demo'?'disabled':''}>${ctx.authTab==='register'?'登録して進む':'ログイン'}</button>${ctx.mode==='demo'?'<p class="note">単一HTMLではアカウントを作成しません。</p>':''}</form></details>`:''}
  ${action('wf-demo','デモを試す','','secondary full')}<p class="note">デモはLINEログイン・実際の招待を行いません。</p></div>`);
@@ -55,7 +55,7 @@ groupScreen=wfGroupScreen;
 function wfAccount(){
  const name=ctx.mode==='demo'?(wf.accountName||oName(state.currentUser)):ctx.user?.name||'';
  const linked=ctx.mode==='server'&&ctx.user?.lineLinked;
- return wfPage('アカウント',wfDemoNote()+`<form data-form="wf-account">${field('表示名','name',name,'text','required maxlength="80" autocomplete="name"')}<button class="secondary full">表示名を保存</button></form><hr class="rule"><h2>ログイン方法</h2><div class="row"><span class="row-main">LINE</span><span class="small ${linked?'green':'muted'}">${linked?'連携済み':'未連携'}</span></div>${!linked?`${action('wf-line-link','このアカウントにLINEを連携',ctx.mode!=='server'||!ctx.pushConfig.lineLogin?'disabled':'','secondary full')}<p class="note wf-gap">${ctx.mode==='demo'?'デモではLINEの本人確認を行いません。':ctx.pushConfig.lineLogin?'現在のグループと履歴を保ったまま連携します。':'Codexで接続設定後に利用できます。秘密キーはこの画面には入力しません。'}</p>`:''}${ctx.user?.email?`<div class="row"><span class="row-main">メール</span><span class="small">${esc(ctx.user.email)}</span></div>`:''}<hr class="rule">${wfEntry('グループを選び直す','groups')}${action('wf-logout',ctx.mode==='demo'?'デモを終了':'ログアウト','','row danger-button')}`,'groups');
+ return wfPage('アカウント',wfDemoNote()+`<form data-form="wf-account">${field('表示名','name',name,'text','required maxlength="80" autocomplete="name"')}<button class="secondary full">表示名を保存</button></form><hr class="rule"><h2>ログイン方法</h2><div class="row"><span class="row-main">LINE</span><span class="small ${linked?'green':'muted'}">${linked?'連携済み':'未連携'}</span></div>${!linked?`${action('wf-line-link','このアカウントにLINEを連携',ctx.mode!=='server'||!ctx.pushConfig.lineLogin?'disabled':'','secondary full')}<p class="note wf-gap">${ctx.mode==='demo'?'デモではLINEの本人確認を行いません。':ctx.pushConfig.lineLogin?'現在のグループと履歴を保ったまま連携します。':'LINEログインは準備中です。メールでのログインをご利用ください。'}</p>`:''}${ctx.user?.email?`<div class="row"><span class="row-main">メール</span><span class="small">${esc(ctx.user.email)}</span></div>`:''}<hr class="rule">${wfEntry('グループを選び直す','groups')}${action('wf-logout',ctx.mode==='demo'?'デモを終了':'ログアウト','','row danger-button')}`,'groups');
 }
 function wfCreateGroup(){return wfPage('グループを作る',wfDemoNote()+`<p class="wf-lead">作成した人がオーナーになります。</p><form data-form="wf-create-group">${field('グループ名','name','','text','required maxlength="100" placeholder="例：バドミントン部"')}<button class="primary full">作成して開く</button></form>`,'groups');}
 function wfGroupSettings(){return shell('グループ設定','settings',`<h2>${esc(state.group.name)}</h2><p class="row-sub wf-gap">オーナー ${esc(oName(state.ownerId))}</p>${wfEntry('運営メンバー・招待','operators')}${wfEntry('別のグループを選ぶ','groups')}${own()?`<hr class="rule"><form data-form="group2">${field('グループ名','name',state.group.name,'text','required maxlength="100"')}<button class="secondary full">名前を保存</button></form>`:`<hr class="rule">${action('wf-leave','このグループから退出','','row danger-button')}`}`,'settings');}
@@ -85,7 +85,7 @@ async function wfPreviewJoin(token){
 }
 function wfJoinPage(){
  const auth=ctx.mode==='demo'||!!ctx.user,info=wf.joinInfo;
- return wfPage('招待から参加',wfDemoNote()+`${wf.joinError?`<div class="warning" role="alert">${esc(wf.joinError)}</div><p class="note wf-gap-bottom">期限切れ・無効な場合は、オーナーに新しいリンクを依頼してください。</p>`:''}${info?`<div class="wf-invite-group"><span class="label">参加先のグループ</span><h2>${esc(info.groupName)}</h2><p class="note wf-gap">運営メンバーとして参加します。初期権限は閲覧のみです。</p></div>${info.isMember?`<p class="wf-callout">すでに参加しています。招待は消費しません。</p>${action('wf-open-group','グループを開く',`data-id="${esc(info.groupId)}"`,'primary full')}`:auth?action('wf-join-confirm',ctx.mode==='demo'?'参加後の流れを試す（デモ）':'このグループに参加','','primary full'):ctx.pushConfig.lineLogin?'<a class="primary full wf-line" href="/api/auth/line/start">LINEでログインして進む</a>':'<p class="warning">LINEログインは接続設定前です。</p><a class="secondary full" href="#welcome">ログイン画面へ</a>'}<p class="note wf-gap">グループ名を確認してから参加してください。</p>`:`<p class="wf-lead">受け取った招待リンクを貼り付けます。</p><form data-form="wf-join-preview"><label class="field"><span class="label">招待リンク</span><textarea name="token" required rows="3" placeholder="招待リンクを貼り付け">${esc(sessionStorage.getItem('club-invite')||'')}</textarea></label><button class="primary full" ${ctx.mode==='demo'?'disabled':''}>参加先を確認</button></form>`}`,'groups');
+ return wfPage('招待から参加',wfDemoNote()+`${wf.joinError?`<div class="warning" role="alert">${esc(wf.joinError)}</div><p class="note wf-gap-bottom">期限切れ・無効な場合は、オーナーに新しいリンクを依頼してください。</p>`:''}${info?`<div class="wf-invite-group"><span class="label">参加先のグループ</span><h2>${esc(info.groupName)}</h2><p class="note wf-gap">運営メンバーとして参加します。初期権限は閲覧のみです。</p></div>${info.isMember?`<p class="wf-callout">すでに参加しています。招待は消費しません。</p>${action('wf-open-group','グループを開く',`data-id="${esc(info.groupId)}"`,'primary full')}`:auth?action('wf-join-confirm',ctx.mode==='demo'?'参加後の流れを試す（デモ）':'このグループに参加','','primary full'):ctx.pushConfig.lineLogin?'<a class="primary full wf-line" href="#welcome" data-act="wf-line-login">LINEでログインして進む</a>':'<p class="warning">LINEログインは接続設定前です。</p><a class="secondary full" href="#welcome">ログイン画面へ</a>'}<p class="note wf-gap">グループ名を確認してから参加してください。</p>`:`<p class="wf-lead">受け取った招待リンクを貼り付けます。</p><form data-form="wf-join-preview"><label class="field"><span class="label">招待リンク</span><textarea name="token" required rows="3" placeholder="招待リンクを貼り付け">${esc(sessionStorage.getItem('club-invite')||'')}</textarea></label><button class="primary full" ${ctx.mode==='demo'?'disabled':''}>参加先を確認</button></form>`}`,'groups');
 }
 function wfCarMutable(id){const p=plan(id);if(!p)throw Error('配車が見つかりません');if(!edit('plans'))throw Error('配車の編集権限がありません');if(lockedPlan(id))throw Error('月次精算が確定済みです');if(event(p.eventId)?.cancelled)throw Error('中止した予定の配車は変更できません');return p;}
 renderCar=function(id){
@@ -176,7 +176,8 @@ window.addEventListener('click',async ev=>{
   if(ctx.mode==='demo'){wf.joinInfo=null;go('operators');toast('参加後は運営メンバーに表示され、オーナーが担当を設定します');break;}
   if(!ctx.user||!wf.joinToken)throw Error('ログインと招待リンクを確認してください');
   const res=await api('/join','POST',{token:wf.joinToken});sessionStorage.removeItem('club-invite');wf.joinInfo=null;wf.joinToken='';await refreshSession();await wfSwitchGroup(res.groupId);toast(res.alreadyMember?'すでに参加しています':'グループに参加しました');break;}
- case'wf-line-link':{const res=await api('/auth/line/link','POST',{});location.assign(res.authorizeUrl);break;}
+ case'wf-line-login':await clubStartLine(false);break;
+ case'wf-line-link':await clubStartLine(true);break;
  case'wf-leave':if(confirm('このグループから退出しますか？')){await api('/groups/'+state.group.id+'/membership','POST',{userId:ctx.user.id,action:'remove'});ctx.base=null;wfClearWorkspace();await refreshSession();go('groups');render();}break;
  case'wf-car-mode':case'split-car':case'split-apply':case'merge-apply':{
   const p=wfCarMutable(d.id),same=act==='merge-apply'||d.value==='same';if(p.linked===same)break;
@@ -241,7 +242,8 @@ bootstrap=async function(){
   if(!location.hash)go('welcome');render();return;
  }
  try{
-  ctx.pushConfig=await api('/config');ctx.mode='server';wf.serverAvailable=true;
+  ctx.pushConfig=await api('/config');ctx.mode='server';wf.serverAvailable=true;wf.emailOpen=!ctx.pushConfig.lineLogin;
+  try{const result=await clubFinishLine(url);if(result)go(result.linked?'account':'groups');}catch(e){wf.loginError=e.message;go('welcome');}
   if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
   try{await refreshSession();}catch(e){if(e.status!==401)throw e;}
   ctx.base=null;ctx.ready=true;if(!location.hash)go(ctx.user?'groups':'welcome');render();

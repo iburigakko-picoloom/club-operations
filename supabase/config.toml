@@ -1,0 +1,4 @@
+[functions.club-api]
+# The handler validates hashed application sessions and CSRF tokens itself.
+# Registration and the LINE authorization callback also need public entry routes.
+verify_jwt = false

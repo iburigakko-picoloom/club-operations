@@ -1,21 +1,16 @@
-# 部活運営アプリ — 実装ベータ 0.9
+# 部活運営アプリ
 
-**[ブラウザーで操作版を開く](https://manatocookietwitter-lang.github.io/club-operations/)**
+**[アプリを開く](https://manatocookietwitter-lang.github.io/club-operations/)**
 
-公開中の操作版はサンプルデータ・端末内保存です。LINEログインと複数人でのデータ共有は含みません。
+公開構成を **GitHub Pages＋Supabase Free** へ移行しています。画面はGitHub Pages、ログイン・招待・編集権限の処理はSupabase Edge Functions、共有データは部活専用Postgresに置きます。Renderは使いません。公開検証の進捗は [接続状況](docs/CONNECTION_STATUS.md) を参照してください。
 
-共有版は [Renderで公開設定を開く](https://render.com/deploy?repo=https://github.com/manatocookietwitter-lang/club-operations) から設定できます。**Render Free＋Supabase Freeの構成**です。有料ディスクは使いません。部活専用Postgresへの接続情報をRenderの秘密設定 `DATABASE_URL` に登録してください。LINEは初期状態では無効で、公開後にチャネル設定が必要です。
+共有版ではメールで登録し、グループを作成して運営メンバーを招待できます。LINEログインはチャネル設定後に有効にします。[端末内保存のデモ](https://manatocookietwitter-lang.github.io/club-operations/?demo) も残しています。
 
-無料公開ではアクセスのない時間にサーバーが休止し、次回表示に時間がかかる場合があります。無料DBにも容量・休止条件があります。端末間共有データは外部DBに残り、サーバーの再起動では消えません。時刻どおりのPush送信は無料の休止するサーバーでは保証できないため無効にしています。利用制限の詳細は [無料版の公開手順](docs/FREE_HOSTING.md) を参照してください。
+- [無料公開・構成](docs/FREE_HOSTING.md)
+- [LINE接続設定](docs/DEPLOYMENT.md)
+- [Python版のローカル起動・旧ホスト構成](docs/PYTHON_HOSTING.md)
 
-## GitHub版の接続準備（2026-09-06）
-
-LINE認証の設定検証、IP単位の認可開始制限（10分に30回）、設定確認コマンド、Dockerfile、GitHub ActionsのAPI・計算テストを追加しました。LINEを有効にした状態で設定が不正な場合は起動を停止します。認可コードや招待リンクをアクセスログへ残さないよう、標準起動のアクセスログを無効にしています。
-
-実チャネル・公開先は未設定で、実LINE認証の接続完了を意味しません。公開設定は [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)、今回の検証記録は [docs/CONNECTION_STATUS.md](docs/CONNECTION_STATUS.md) を参照してください。`QA_REPORT.md`、`qa/`、`docs/FILE_HASHES.json` は提供ZIP時点の記録です。
-
-運営メンバー向けの予定・やること・出欠・配車・練習メニュー・備品をまとめたPWAです。
-**このZIPはソースとローカル起動用一式です。インターネットへの公開は行っていません。**
+`web/` は画面、`supabase/functions/club-api/` は公開サーバー処理です。`server/` は互換性確認・ローカル起動用Python実装です。`qa/`、`QA_REPORT.md`、`docs/FILE_HASHES.json` は提供ZIP時点の記録で、現在の検証結果ではありません。
 
 ## v0.9で変えたところ
 

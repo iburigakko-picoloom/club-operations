@@ -16,7 +16,7 @@ function own(){return ctx.mode==='demo'||state.currentUser===state.ownerId;}
 function edit(key){return own()||state.roles[MODULE_ROLES[key]||key]?.includes(state.currentUser);}
 function ownTask(t){return !t.assignmentNeedsReview&&(!t.assignees.length||t.assignees.includes(state.currentUser));}
 function noticeVisible(n){if(own())return true;if(n.assignmentNeedsReview)return false;if(n.targetMode==='role')return n.targetRoles?.some(r=>state.roles[r]?.includes(state.currentUser));return !n.assignees.length||n.assignees.includes(state.currentUser);}
-async function api(path,method='GET',data){const r=await fetch('/api'+path,{method,credentials:'same-origin',headers:{'Content-Type':'application/json',...(ctx.csrf?{'X-CSRF-Token':ctx.csrf}:{})},body:data===undefined?undefined:JSON.stringify(data)});let v;try{v=await r.json()}catch{throw Error('サーバーとの接続を確認してください')}if(!r.ok){const err=Error(v.detail||'保存できませんでした');err.status=r.status;throw err;}return v;}
+async function api(path,method='GET',data){return clubRequest(path,method,data,ctx.csrf);}
 function safeLocal(key,value){try{localStorage.setItem(key,value);return true}catch{return false}}
 persist=function(){
  if(ctx.mode==='demo'){if(!safeLocal(STORAGE_KEY,JSON.stringify(state))){toast('保存できません。バックアップしてください');return false;}return true;}

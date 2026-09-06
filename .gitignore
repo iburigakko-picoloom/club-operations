@@ -10,3 +10,5 @@ __pycache__/
 *.pem
 backups/
 .review-deps/
+.edge-test-run.json
+node_modules/
