@@ -30,7 +30,7 @@ def init_identity(c):
       client_hash TEXT PRIMARY KEY, window_start REAL NOT NULL, attempts INTEGER NOT NULL);
     ''')
     fields={r['name'] for r in c.execute('PRAGMA table_info(invites)')}
-    for name,definition in [('created_at','REAL NOT NULL DEFAULT 0'),('created_by','TEXT')]:
+    for name,definition in [('created_at','REAL NOT NULL DEFAULT 0'),('created_by','TEXT'),('max_uses','INTEGER NOT NULL DEFAULT 1'),('use_count','INTEGER NOT NULL DEFAULT 0')]:
         if name not in fields:c.execute(f'ALTER TABLE invites ADD COLUMN {name} {definition}')
 
 def line_config_errors():
@@ -197,7 +197,7 @@ def install(m):
         with m.connect() as c:
             group=m.member(c,gid,u['id'])
             if group['owner_id']!=u['id']:m.fail('オーナーだけが確認できます',403)
-            return {'invites':[{'id':r['token'],'createdAt':r['created_at'],'expiresAt':r['expires'],
+            return {'invites':[{'id':r['token'],'createdAt':r['created_at'],'expiresAt':r['expires'],'maxUses':r['max_uses'],'useCount':r['use_count'] if r['used']!=1 else r['max_uses'],
              'status':'used' if r['used']==1 else 'revoked' if r['used']==2 else 'expired' if r['expires']<=time.time() else 'active'}
              for r in c.execute('SELECT * FROM invites WHERE group_id=? ORDER BY created_at DESC LIMIT 100',(gid,))]}
 

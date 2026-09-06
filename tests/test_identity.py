@@ -20,6 +20,24 @@ def configure(monkeypatch):
 def account(c,email='a@example.org'):
  res=c.post('/api/register',json={'email':email,'name':'名前A','password':'password-long-test'});assert res.status_code==200;return res.json()
 def hdr(u):return {'X-CSRF-Token':u['csrf']}
+
+def test_invitation_capacity_and_duplicate_join(client):
+ owner=account(client);gid=group(client,owner)
+ for count in [0,101,1.5,True]:
+  assert client.post(f'/api/groups/{gid}/invite',json={'maxUses':count},headers=hdr(owner)).status_code==400
+ invite=client.post(f'/api/groups/{gid}/invite',json={'maxUses':2},headers=hdr(owner)).json()
+ assert invite['maxUses']==2
+ owner_cookies=dict(client.cookies)
+ first=account(client,'first@example.org')
+ for _ in range(2):assert client.post('/api/join',json={'token':invite['token']},headers=hdr(first)).status_code==200
+ second=account(client,'second@example.org')
+ assert client.post('/api/join',json={'token':invite['token']},headers=hdr(second)).status_code==200
+ third=account(client,'third@example.org')
+ assert client.post('/api/join',json={'token':invite['token']},headers=hdr(third)).status_code==400
+ client.cookies.clear();client.cookies.update(owner_cookies)
+ row=client.get(f'/api/groups/{gid}/invites').json()['invites'][0]
+ assert row['maxUses']==2 and row['useCount']==2 and row['status']=='used'
+
 def group(c,u):return c.post('/api/groups',json={'name':'部活A'},headers=hdr(u)).json()['group']['id']
 def begin(c):
  r=c.get('/api/auth/line/start',follow_redirects=False);assert r.status_code==303,r.text

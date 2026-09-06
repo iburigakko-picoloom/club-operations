@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS club.login_limits(client_hash TEXT PRIMARY KEY,window
 
 CREATE INDEX IF NOT EXISTS memberships_user_idx ON club.memberships(user_id);
 CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON club.sessions(expires);
+ALTER TABLE club.invites ADD COLUMN IF NOT EXISTS max_uses INTEGER NOT NULL DEFAULT 1 CHECK(max_uses BETWEEN 1 AND 100);
+ALTER TABLE club.invites ADD COLUMN IF NOT EXISTS use_count INTEGER NOT NULL DEFAULT 0 CHECK(use_count>=0);
+UPDATE club.invites SET use_count=1 WHERE used=1 AND use_count=0;
 CREATE INDEX IF NOT EXISTS invites_group_idx ON club.invites(group_id);
 CREATE INDEX IF NOT EXISTS subscriptions_user_idx ON club.subscriptions(user_id);
 CREATE INDEX IF NOT EXISTS jobs_due_idx ON club.jobs(due) WHERE status='pending';

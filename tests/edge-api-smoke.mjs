@@ -37,6 +37,13 @@ try{
  const inv2=await call('/groups/'+gid+'/invite','POST',{},a);const list=await call('/groups/'+gid+'/invites','GET',undefined,a);const active=list.invites.find(i=>i.status==='active');assert.ok(active);await call('/groups/'+gid+'/invites/'+active.id+'/revoke','POST',{},a);await call('/invites/'+inv2.token,'GET',undefined,undefined,400);
  await call('/account','PATCH',{name:'変更した名前'},b);assert.equal((await call('/session','GET',undefined,b)).user.name,'変更した名前');
  await call('/groups/'+gid+'/membership','POST',{userId:b.user.id,action:'remove'},a);await call(endpoint,'GET',undefined,b,403);
+ for(const maxUses of [0,101,1.5,true])await call('/groups/'+gid+'/invite','POST',{maxUses},a,400);
+ const multi=await call('/groups/'+gid+'/invite','POST',{maxUses:2},a);assert.equal(multi.maxUses,2);
+ await call('/join','POST',{token:multi.token},b);await call('/join','POST',{token:multi.token},b);
+ const extraEmail=`qa-${run}-c@club-qa.invalid`;emails.push(extraEmail);const extra=await call('/register','POST',{email:extraEmail,password,name:'公開検証C'});users.push(extra.user.id);await record();
+ await call('/join','POST',{token:multi.token},extra);await call('/join','POST',{token:multi.token},extra,400);
+ const multiList=await call('/groups/'+gid+'/invites','GET',undefined,a);assert.ok(multiList.invites.some(i=>i.maxUses===2&&i.useCount===2&&i.status==='used'));
+ await call('/logout','POST',{},extra);
  await call('/logout','POST',{},a);await call('/session','GET',undefined,a,401);
  await call('/login','POST',{email:emails[0],password:'wrong-password'},undefined,401);
  const signedIn=await call('/login','POST',{email:emails[0],password});assert.equal(signedIn.user.id,a.user.id);await call('/logout','POST',{},signedIn);await call('/logout','POST',{},b);

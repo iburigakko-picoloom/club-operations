@@ -397,13 +397,14 @@ async def update_state(gid:str,req:Request):
         c.execute('INSERT INTO audit(group_id,user_id,action,created_at,details) VALUES(?,?,?,?,?)',(gid,u['id'],'update',stamp(),json.dumps(list(changes))))
         schedule_jobs(c,gid,s,old,operators,g['owner_id']);result=view(c,member(c,gid,u['id']),u);c.commit();return result
 @app.post('/api/groups/{gid}/invite')
-def invite(gid:str,req:Request):
-    u=mutation(req)
+async def invite(gid:str,req:Request):
+    u=mutation(req);b=await body(req) if await req.body() else {};max_uses=b.get('maxUses',1)
+    if type(max_uses) is not int or not 1<=max_uses<=100:fail('招待人数は1〜100人で指定してください')
     with connect() as c:
         g=member(c,gid,u['id'])
         if g['owner_id']!=u['id']:fail('オーナーだけが招待できます',403)
-        token=secrets.token_urlsafe(24);expires=time.time()+86400*7;c.execute('INSERT INTO invites(token,group_id,expires,used,created_at,created_by) VALUES(?,?,?,0,?,?)',(hashlib.sha256(token.encode()).hexdigest(),gid,expires,time.time(),u['id']))
-    return {'token':token,'expiresInDays':7,'expiresAt':expires}
+        token=secrets.token_urlsafe(24);expires=time.time()+86400*7;c.execute('INSERT INTO invites(token,group_id,expires,used,created_at,created_by,max_uses) VALUES(?,?,?,0,?,?,?)',(hashlib.sha256(token.encode()).hexdigest(),gid,expires,time.time(),u['id'],max_uses))
+    return {'token':token,'expiresInDays':7,'expiresAt':expires,'maxUses':max_uses}
 @app.get('/api/invites/{token}')
 def invite_info(token:str,req:Request):
     digest=hashlib.sha256(token.encode()).hexdigest()
@@ -422,7 +423,7 @@ async def join(req:Request):
         if not r:fail('招待が無効または期限切れです')
         if c.execute('SELECT 1 FROM memberships WHERE group_id=? AND user_id=?',(r['group_id'],u['id'])).fetchone():
             c.commit();return {'groupId':r['group_id'],'alreadyMember':True}
-        c.execute('INSERT OR IGNORE INTO memberships VALUES(?,?)',(r['group_id'],u['id']));c.execute('UPDATE invites SET used=1 WHERE token=?',(token,));c.execute('UPDATE groups SET version=version+1 WHERE id=?',(r['group_id'],));c.commit();return {'groupId':r['group_id']}
+        c.execute('INSERT OR IGNORE INTO memberships VALUES(?,?)',(r['group_id'],u['id']));c.execute('UPDATE invites SET use_count=use_count+1,used=CASE WHEN use_count+1>=max_uses THEN 1 ELSE 0 END WHERE token=?',(token,));c.execute('UPDATE groups SET version=version+1 WHERE id=?',(r['group_id'],));c.commit();return {'groupId':r['group_id']}
 @app.post('/api/groups/{gid}/membership')
 async def membership(gid:str,req:Request):
     u=mutation(req);b=await body(req);target=b.get('userId');act=b.get('action')
