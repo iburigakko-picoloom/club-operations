@@ -12,7 +12,7 @@ renderCalendar=function(){
  const first=`${y}-${String(m+1).padStart(2,'0')}-01`;let cells='';
  for(let i=0;i<count;i++){
   const date=D.addDays(first,i-offset),items=calItems(date),selected=clubCalendar.selected.has(date),primary=items[0],hex=calColor(primary?.type==='event'?event(primary.id):primary);
-  cells+=`<button type="button" class="cal-day ${date.slice(0,7)!==first.slice(0,7)?'outside':''} ${date===DEMO_TODAY?'today':''} ${selected?'selected':''} ${items.length?'has-event':''}" style="--event-bg:${hex}60" data-act="cal-day" data-date="${date}" aria-pressed="${selected}" aria-label="${date} ${esc(items.map(x=>x.title).join('、')||'予定なし')}"><span class="cal-number">${Number(date.slice(-2))}</span>${items.slice(0,1).map(item=>{const e=item.type==='event'?event(item.id):item,period=e.endDate>e.date;return `<span class="cal-event ${period?'period':''}" style="--event-color:${calColor(e)}">${esc(item.title)}</span>`;}).join('')}${items.length>1?`<span class="cal-more">＋${items.length-1}件</span>`:''}</button>`;
+  cells+=`<button type="button" class="cal-day ${date.slice(0,7)!==first.slice(0,7)?'outside':''} ${date===DEMO_TODAY?'today':''} ${selected?'selected':''} ${items.length?'has-event':''}" style="--event-bg:${hex}60" data-act="cal-day" data-date="${date}" aria-pressed="${selected}" aria-label="${date} ${esc(items.map(x=>x.title).join('、')||'予定なし')}"><span class="cal-number">${Number(date.slice(-2))}</span>${items.slice(0,1).map(item=>{const e=item.type==='event'?event(item.id):item,period=e.endDate>e.date;return `<span class="cal-event ${period?'period':''}" data-cal-id="${esc(item.id)}" data-cal-type="${item.type}" style="--event-color:${calColor(e)}">${esc(item.title)}</span>`;}).join('')}${items.length>1?`<span class="cal-more">＋${items.length-1}件</span>`:''}</button>`;
  }
  const selection=clubCalendar.selecting?`<div class="cal-selection" role="region" aria-label="日付の選択"><div>${action('cal-clear','×','aria-label="選択を終了"','icon-btn')}<strong>${clubCalendar.selected.size}日を選択</strong></div><div>${action('cal-selected-add','＋ 予定',clubCalendar.selected.size?'':'disabled','primary')}${action('cal-color','色',clubCalendar.selected.size?'':'disabled','secondary')}${action('cal-cancel','中止',clubCalendar.selected.size?'':'disabled','secondary')}</div></div>`:'';
  return shell('予定','calendar',`<section class="cal-surface"><div class="cal-month">${action('month','‹','data-dir="-1" aria-label="前の月"','icon-btn')}${action('cal-month',`${y}年${m+1}月`,'','cal-month-label')}${action('month','›','data-dir="1" aria-label="次の月"','icon-btn')}${action('cal-today','今日','','text-btn')}</div>${segments([['club','部活のみ'],['all','幹部予定も表示']],ui.showExec?'all':'club','calendar-filter')}<div class="cal-grid" style="--weeks:${count/7}" aria-label="月間カレンダー">${'日月火水木金土'.split('').map(x=>`<div class="cal-weekday">${x}</div>`).join('')}${cells}</div><div class="cal-footer">${edit('events')?action('cal-select','複数の日付を選択','','text-btn'):''}${action('wf-calendar-image','予定表を画像にする','','text-btn')}</div>${selection}</section>`,'',edit('events')?action('cal-add',icon('plus'),'aria-label="予定を追加"','icon-btn'):'');
@@ -74,8 +74,41 @@ window.addEventListener('submit',ev=>{
   calCommit();
  }catch(error){const box=f.querySelector('.cal-error');if(box)box.textContent=error.message;else toast(error.message);}
 },true);
-let calPress=null,calPressTimer=null;
-window.addEventListener('pointerdown',ev=>{const b=ev.target.closest('[data-act="cal-day"]');if(!b||!edit('events')||ctx.busy||ev.button!==0)return;calPress={x:ev.clientX,y:ev.clientY,date:b.dataset.date};calPressTimer=setTimeout(()=>{clubCalendar.selecting=true;clubCalendar.selected.add(calPress.date);clubCalendar.suppressClick=Date.now()+700;calPressTimer=null;render();},500);},true);
-window.addEventListener('pointermove',ev=>{if(calPress&&Math.hypot(ev.clientX-calPress.x,ev.clientY-calPress.y)>10){clearTimeout(calPressTimer);calPressTimer=null;}},true);
-for(const type of ['pointerup','pointercancel','blur'])window.addEventListener(type,()=>{clearTimeout(calPressTimer);calPressTimer=null;calPress=null;},true);
+// Date-only movement keeps the source record and all ID-based relationships.
+async function calMoveRecord(type,id,from,to){
+ if(!D.validDate(from)||!D.validDate(to))throw Error('日付を確認してください');if(from===to)return;
+ const key=type==='task'?'tasks':'events';if(!edit(key))throw Error('編集権限がありません');
+ const item=state[key].find(x=>x.id===id);if(!item||item.cancelled||item.deleted)throw Error('予定が見つかりません');
+ if(from<item.date||from>(item.endDate||item.date))throw Error('予定が変更されています');
+ const shift=Math.round((Date.parse(to+'T12:00:00Z')-Date.parse(from+'T12:00:00Z'))/86400000),plans=key==='events'?(state.plans||[]).filter(p=>p.eventId===id):[];
+ if(plans.some(p=>lockedPlan(p.id)))throw Error('精算確定済みの予定は移動できません');
+ if(plans.length&&!edit('plans'))throw Error('配車がある予定の移動には配車の編集権限も必要です');
+ await wfSave(()=>{const start=item.date,end=item.endDate||item.date;item.date=D.addDays(start,shift);if(key==='events'){item.endDate=D.addDays(end,shift);item.seriesId=null;}for(const p of plans){for(const leg of ['outbound','return'])if(p.legDates?.[leg]===start||p.legDates?.[leg]===end)p.legDates[leg]=D.addDays(p.legDates[leg],shift);p.status='draft';p.version=(p.version||0)+1;}D.seedAttendance(state);});
+ toast('日程を変更しました');
+}
+let calPress=null,calPressTimer=null,calGhost=null;
+function calDragClear(){clearTimeout(calPressTimer);calPressTimer=null;calPress=null;calGhost?.remove();calGhost=null;document.querySelectorAll('.cal-drop-over').forEach(e=>e.classList.remove('cal-drop-over'));}
+window.addEventListener('pointerdown',ev=>{
+ const b=ev.target.closest('[data-act="cal-day"]');if(!b||ctx.busy||ev.button!==0)return;
+ const chip=ev.target.closest('[data-cal-id]'),items=calItems(b.dataset.date),item=chip?items.find(x=>x.id===chip.dataset.calId&&x.type===chip.dataset.calType):items.length===1?items[0]:null;
+ if(!edit(item?.type==='task'?'tasks':'events'))return;
+ calPress={x:ev.clientX,y:ev.clientY,date:b.dataset.date,id:ev.pointerId,item,active:false,group:state.group.id};
+ calPressTimer=setTimeout(()=>{if(!calPress)return;calPressTimer=null;clubCalendar.suppressClick=Date.now()+700;
+  if(item&&!clubCalendar.selecting){calPress.active=true;calGhost=document.createElement('div');calGhost.className='drag-ghost';calGhost.textContent=item.title;document.body.appendChild(calGhost);calGhost.style.transform=`translate(${calPress.x-35}px,${calPress.y-20}px)`;try{b.setPointerCapture(ev.pointerId);}catch{}}
+  else{clubCalendar.selecting=true;clubCalendar.selected.add(calPress.date);render();}
+ },450);
+},true);
+window.addEventListener('pointermove',ev=>{
+ if(!calPress||ev.pointerId!==calPress.id)return;
+ if(!calPress.active){if(Math.hypot(ev.clientX-calPress.x,ev.clientY-calPress.y)>10)calDragClear();return;}
+ ev.preventDefault();calGhost.style.transform=`translate(${ev.clientX-35}px,${ev.clientY-20}px)`;document.querySelectorAll('.cal-drop-over').forEach(e=>e.classList.remove('cal-drop-over'));document.elementFromPoint(ev.clientX,ev.clientY)?.closest('[data-act="cal-day"]')?.classList.add('cal-drop-over');
+},{capture:true,passive:false});
+window.addEventListener('touchmove',ev=>{if(calPress?.active)ev.preventDefault();},{capture:true,passive:false});
+for(const type of ['pointerup','pointercancel'])window.addEventListener(type,async ev=>{
+ if(!calPress||ev.pointerId!==calPress.id)return;const p=calPress,to=document.elementFromPoint(ev.clientX,ev.clientY)?.closest('[data-act="cal-day"]')?.dataset.date;
+ if(p.active){clubCalendar.suppressClick=Date.now()+700;ev.preventDefault();}calDragClear();
+ if(type==='pointerup'&&p.active&&to&&p.group===state.group.id)try{await calMoveRecord(p.item.type,p.item.id,p.date,to);}catch(error){toast(error.message);}
+},true);
+window.addEventListener('blur',calDragClear);
+window.addEventListener('hashchange',calDragClear);
 window.addEventListener('contextmenu',ev=>{if(ev.target.closest('[data-act="cal-day"]')&&edit('events'))ev.preventDefault();});
