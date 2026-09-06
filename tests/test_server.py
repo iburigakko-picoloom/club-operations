@@ -206,3 +206,36 @@ def test_orphan_assignment_does_not_become_all(env):
  s={'roles':{}}
  assert module.targeted(s,{'assignees':[],'assignmentNeedsReview':True},'anyone') is False
  assert module.targeted(s,{'assignees':[]},'anyone') is True
+
+def test_gym_relation_preserves_legacy_event_and_training_roundtrip(env):
+ u=account(env);s=populate(env,u,create(env,u));legacy=copy.deepcopy(s['events']);training=copy.deepcopy(s['training'])
+ r=patch(env,u,s,{'venues':s['venues']+[{'id':'v2','name':'新体育館','courts':2,'memo':'鍵'}],'venueAssignments':{'e':{'venueId':'v2'}}})
+ assert r.status_code==200,r.text
+ got=get(env,s['group']['id']);assert got['events']==legacy;assert got['training']==training;assert got['venueAssignments']['e']['venueId']=='v2'
+ assert patch(env,u,got,{'venueAssignments':{'foreign':{'venueId':'v2'}}}).status_code==400
+ assert patch(env,u,got,{'venueAssignments':{'e':{'venueId':'missing'}}}).status_code==400
+ assert patch(env,u,got,{'venueAssignments':[]}).status_code==400
+
+
+def test_executive_single_records_overlap_completion_and_notification(env):
+ u=account(env);s=populate(env,u,create(env,u));date=module.add_months(module.now().date(),2).isoformat()
+ xs=[{'id':'ex'+str(i),'kind':'executive','title':'幹部予定'+str(i),'date':date,'start':'18:00','end':'19:00','assignees':[],'notifications':['P1M','P7D','P3D','P1D'],'done':False} for i in range(2)]
+ r=patch(env,u,s,{'events':s['events']+xs});assert r.status_code==200,r.text
+ got=get(env,s['group']['id']);assert len(got['events'])==3;assert got['tasks']==[];assert got['events'][1]['notifications']==xs[0]['notifications']
+ with module.connect() as db:
+  count=db.execute("SELECT count(*) AS n FROM jobs WHERE group_id=? AND status='pending'",(s['group']['id'],)).fetchone()['n']
+ assert count==8
+ events=copy.deepcopy(got['events']);events[1]['done']=True
+ r=patch(env,u,got,{'events':events});assert r.status_code==200,r.text
+ got=get(env,s['group']['id']);assert got['events'][1]['done'];assert got['events'][1]['completedBy']==u['user']['id'];assert got['tasks']==[]
+
+
+def test_executive_and_gym_permissions(env):
+ a=account(env);s=populate(env,a,create(env,a));gid=s['group']['id'];x={'id':'exec','kind':'executive','title':'全員担当','date':module.now().date().isoformat(),'start':'','end':'','assignees':[]}
+ s=patch(env,a,s,{'events':s['events']+[x]}).json();token=env.post('/api/groups/'+gid+'/invite',headers=auth(a)).json()['token']
+ env.post('/api/logout',headers=auth(a));b=account(env,'b@example.org');assert env.post('/api/join',headers=auth(b),json={'token':token}).status_code==200
+ s=get(env,gid);events=copy.deepcopy(s['events']);events[1]['done']=True
+ r=patch(env,b,s,{'events':events});assert r.status_code==200,r.text;s=r.json()
+ events=copy.deepcopy(s['events']);events[1]['title']='権限外';assert patch(env,b,s,{'events':events}).status_code==403
+ events=copy.deepcopy(s['events']);events[0]['done']=True;assert patch(env,b,s,{'events':events}).status_code==403
+ assert patch(env,b,s,{'venueAssignments':{'e':{'venueId':'v'}}}).status_code==403

@@ -27,7 +27,7 @@ function datesFor({date:dt,endDate,mode='single',repeatUntil,weekdays=[],selecte
  if(!days.length)throw Error('期間内に対象日がありません');if(days.length>120)throw Error('一度に120日まで');return days;
 }
 function calendarItems(s,day,showExec){
- let out=s.events.filter(e=>!e.cancelled&&e.date<=day&&(e.endDate||e.date)>=day&&(e.kind==='club'||showExec)).map(e=>({id:e.id,type:'event',kind:e.kind,title:e.title,time:e.start||'',end:e.end||'',venueId:e.venueId,assignees:e.assignees||[]}));
+ let out=s.events.filter(e=>!e.cancelled&&!e.done&&e.date<=day&&(e.endDate||e.date)>=day&&(e.kind==='club'||showExec)).map(e=>({id:e.id,type:'event',kind:e.kind,title:e.title,time:e.start||'',end:e.end||'',venueId:e.venueId,assignees:e.assignees||[]}));
  if(showExec)out.push(...s.tasks.filter(t=>!t.done&&!t.deleted&&t.date===day).map(t=>({id:t.id,type:'task',kind:'task',title:t.title+'（締切）',time:t.time,assignees:t.assignees||[]})));
  return out.sort((a,b)=>a.time.localeCompare(b.time)||a.type.localeCompare(b.type));
 }

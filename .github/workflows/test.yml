@@ -16,7 +16,7 @@ jobs:
           node-version: '22'
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m pytest -q tests/test_server.py tests/test_identity.py
-      - run: node --test tests/domain.test.cjs tests/edge-domain.test.mjs tests/transport.test.cjs tests/calendar.test.cjs tests/experience.test.cjs
+      - run: node --test tests/domain.test.cjs tests/edge-domain.test.mjs tests/transport.test.cjs tests/calendar.test.cjs tests/experience.test.cjs tests/operations.test.cjs
       - name: Verify generated demo
         run: |
           python tools/build_demo.py

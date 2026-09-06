@@ -17,7 +17,7 @@ ROOT=Path(__file__).resolve().parents[1]
 DB_PATH=Path(os.environ.get('CLUB_DB', str(ROOT/'data'/'club.sqlite3')))
 JST=ZoneInfo('Asia/Tokyo')
 COOKIE='club_session'
-MODULES={'events':'予定','tasks':'やること','notices':'お知らせ','people':'部員','attendance':'出欠','plans':'配車','settlements':'配車','venues':'体育館','training':'練習メニュー','equipment':'備品','settings':'設定','roles':'権限','group':'グループ'}
+MODULES={'events':'予定','tasks':'やること','notices':'お知らせ','people':'部員','attendance':'出欠','plans':'配車','settlements':'配車','venues':'体育館','venueAssignments':'体育館','training':'練習メニュー','equipment':'備品','settings':'設定','roles':'権限','group':'グループ'}
 ARRAYS=['people','events','tasks','notices','plans','venues','equipment','settlements']
 AUTH_ATTEMPTS={}
 
@@ -105,6 +105,7 @@ def add_months(d,n):
 def seed_attendance(s):
     start=now().date();end=add_months(start,3)
     for e in s['events']:
+        if 'done' in e and not isinstance(e['done'],bool):fail('完了状態を確認してください')
         if e.get('kind')!='club' or e.get('cancelled') or not start.isoformat()<=e['date']<=end.isoformat(): continue
         for p in s['people']:
             if p.get('active',True) and p.get('joinedDate','0000')<=e['date']:
@@ -150,6 +151,9 @@ def validate(s,operators):
         if e.get('venueId') and e['venueId'] not in vs:fail('体育館が見つかりません')
         if any(x not in operators for x in e.get('assignees',[])):fail('担当者を確認してください')
         if e.get('courts') is not None:number(e['courts'],1,30)
+    if not isinstance(s.get('venueAssignments',{}),dict):fail('体育館割当を確認してください')
+    for eid,a in s.get('venueAssignments',{}).items():
+        if es.get(eid,{}).get('kind')!='club' or not isinstance(a,dict) or a.get('venueId') not in vs:fail('体育館割当を確認してください')
     for t in s['tasks']:
         text(t.get('title'),200,True)
         if not isdate(t.get('date')):fail('期限を確認してください')
@@ -339,11 +343,12 @@ async def update_state(gid:str,req:Request):
                 if key=='group' and value.get('id')!=gid:fail('グループが一致しません',403)
             elif not can(old,u['id'],key,g['owner_id']):
                 # A task assignee may change only completion metadata, not assignment/title.
-                if key!='tasks':fail('編集権限がありません',403)
-                a={t['id']:t for t in old['tasks']};new={t['id']:t for t in value}
+                if key not in ['tasks','events']:fail('編集権限がありません',403)
+                a={t['id']:t for t in old[key]};new={t['id']:t for t in value}
                 if a.keys()!=new.keys():fail('やることの編集権限がありません',403)
                 for tid,t in new.items():
                     if t==a[tid]:continue
+                    if key=='events' and a[tid].get('kind')!='executive':fail('編集権限がありません',403)
                     allowed=['done','completedAt','completedBy']
                     if a[tid].get('assignmentNeedsReview'):fail('担当者の再設定が必要です',403)
                     if a[tid].get('assignees') and u['id'] not in a[tid]['assignees']:fail('担当者ではありません',403)
@@ -392,7 +397,7 @@ async def update_state(gid:str,req:Request):
                 x['updatedAt']=stamp();x['updatedBy']=u['id']
                 if key=='notices':
                     original=prev.get(x['id']);x['author']=original.get('author') if original else u['name'];x['authorId']=original.get('authorId') if original else u['id'];x['date']=original.get('date') if original else now().date().isoformat()
-                if key=='tasks':x['completedBy']=u['id'] if x.get('done') else None;x['completedAt']=stamp() if x.get('done') else None
+                if key=='tasks' or (key=='events' and x.get('kind')=='executive'):x['completedBy']=u['id'] if x.get('done') else None;x['completedAt']=stamp() if x.get('done') else None
         c.execute('UPDATE groups SET data=?,version=version+1 WHERE id=?',(json.dumps(s,ensure_ascii=False),gid))
         c.execute('INSERT INTO audit(group_id,user_id,action,created_at,details) VALUES(?,?,?,?,?)',(gid,u['id'],'update',stamp(),json.dumps(list(changes))))
         schedule_jobs(c,gid,s,old,operators,g['owner_id']);result=view(c,member(c,gid,u['id']),u);c.commit();return result

@@ -1,7 +1,7 @@
 // Shared-state rules. Keep authorization and settlement history checks on the server.
 export class HttpError extends Error { constructor(detail, status=400){super(detail);this.status=status;} }
 export function fail(message,status=400){throw new HttpError(message,status);}
-export const MODULES={events:'予定',tasks:'やること',notices:'お知らせ',people:'部員',attendance:'出欠',plans:'配車',settlements:'配車',venues:'体育館',training:'練習メニュー',equipment:'備品',settings:'設定',roles:'権限',group:'グループ'};
+export const MODULES={events:'予定',tasks:'やること',notices:'お知らせ',people:'部員',attendance:'出欠',plans:'配車',settlements:'配車',venues:'体育館',venueAssignments:'体育館',training:'練習メニュー',equipment:'備品',settings:'設定',roles:'権限',group:'グループ'};
 const ARRAYS=['people','events','tasks','notices','plans','venues','equipment','settlements'];
 export const object=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 export function text(x,limit=2000,required=false){if(typeof x!=='string'||x.length>limit||(required&&!x.trim()))fail('文字の入力を確認してください');}
@@ -26,7 +26,8 @@ export function validate(s,operators){
  const ps=new Map(s.people.map(p=>[p.id,p])),es=new Map(s.events.map(e=>[e.id,e])),vs=new Set(s.venues.map(v=>v.id));
  const assignees=x=>{if(array(x||[]).some(id=>!operators.has(id)))fail('担当者を確認してください');};
  for(const p of s.people){text(p.name,80,true);text(p.memo??'');number(p.grade,1,6);if(!['above','below'].includes(p.seniority)||!['university','station'].includes(p.pickup))fail('部員の区分を確認してください');if(p.defaultOverride!=null&&typeof p.defaultOverride!=='boolean')fail('参加設定を確認してください');}
- for(const e of s.events){text(e.title,200,true);if(!['club','executive'].includes(e.kind)||!isdate(e.date))fail('予定の日時を確認してください');const end=e.endDate||e.date;if(!isdate(end)||end<e.date)fail('終了日を確認してください');for(const k of ['start','end'])if(e[k]&&!istime(e[k]))fail('時刻を確認してください');if(end===e.date&&e.start&&e.end&&e.end<e.start)fail('終了時刻を確認してください');if(e.venueId&&!vs.has(e.venueId))fail('体育館が見つかりません');assignees(e.assignees);if(e.courts!=null)number(e.courts,1,30);}
+ for(const e of s.events){if(e.done!==undefined&&typeof e.done!=='boolean')fail('完了状態を確認してください');text(e.title,200,true);if(!['club','executive'].includes(e.kind)||!isdate(e.date))fail('予定の日時を確認してください');const end=e.endDate||e.date;if(!isdate(end)||end<e.date)fail('終了日を確認してください');for(const k of ['start','end'])if(e[k]&&!istime(e[k]))fail('時刻を確認してください');if(end===e.date&&e.start&&e.end&&e.end<e.start)fail('終了時刻を確認してください');if(e.venueId&&!vs.has(e.venueId))fail('体育館が見つかりません');assignees(e.assignees);if(e.courts!=null)number(e.courts,1,30);}
+ for(const [eid,a] of Object.entries(dict(s.venueAssignments===undefined?{}:s.venueAssignments))){if(es.get(eid)?.kind!=='club'||!object(a)||!vs.has(a.venueId))fail('体育館割当を確認してください');}
  for(const t of s.tasks){text(t.title,200,true);if(!isdate(t.date)||!istime(t.time))fail('期限日時を確認してください');assignees(t.assignees);if(t.relatedEventId&&!es.has(t.relatedEventId))fail('関連予定を確認してください');}
  for(const n of s.notices){text(n.title,200,true);text(n.body,20000,true);assignees(n.assignees);if(n.targetRoles)array(n.targetRoles);}
  for(const [k,v] of Object.entries(s.attendance)){const [eid,mid,...extra]=k.split('|');if(extra.length||!es.has(eid)||!ps.has(mid)||typeof v!=='boolean')fail('出欠の対象を確認してください');}
@@ -55,9 +56,9 @@ export function updateState(old,changes,user,owner,gid,operators){
  for(const [key,input] of Object.entries(changes)){let value=structuredClone(input);
   if(['settings','roles','group'].includes(key)){if(user.id!==owner)fail('オーナーだけが変更できます',403);if(key==='group'&&value?.id!==gid)fail('グループが一致しません',403);}
   else if(user.id!==owner&&!(old.roles[MODULES[key]]||[]).includes(user.id)){
-   if(key!=='tasks')fail('編集権限がありません',403);
-   const prev=new Map(old.tasks.map(t=>[t.id,t]));array(value);if(value.length!==prev.size||new Set(value.map(t=>t.id)).size!==prev.size)fail('やることの編集権限がありません',403);
-   for(const t of value){const a=prev.get(t.id);if(!a)fail('やることの編集権限がありません',403);if(equal(a,t))continue;if(a.assignmentNeedsReview)fail('担当者の再設定が必要です',403);if(a.assignees?.length&&!a.assignees.includes(user.id))fail('担当者ではありません',403);if(!equal(without(a,['done','completedAt','completedBy']),without(t,['done','completedAt','completedBy'])))fail('完了操作だけ可能です',403);}
+   if(!['tasks','events'].includes(key))fail('編集権限がありません',403);
+   const prev=new Map(old[key].map(t=>[t.id,t]));array(value);if(value.length!==prev.size||new Set(value.map(t=>t.id)).size!==prev.size)fail('やることの編集権限がありません',403);
+   for(const t of value){const a=prev.get(t.id);if(!a)fail('やることの編集権限がありません',403);if(equal(a,t))continue;if(key==='events'&&a.kind!=='executive')fail('編集権限がありません',403);if(a.assignmentNeedsReview)fail('担当者の再設定が必要です',403);if(a.assignees?.length&&!a.assignees.includes(user.id))fail('担当者ではありません',403);if(!equal(without(a,['done','completedAt','completedBy']),without(t,['done','completedAt','completedBy'])))fail('完了操作だけ可能です',403);}
   }
   if(key==='notices'&&user.id!==owner){array(value);const hidden=old.notices.filter(n=>!targeted(old,n,user.id)),ids=new Set(value.map(n=>n.id));if(hidden.some(n=>ids.has(n.id)))fail('非公開のお知らせは編集できません',403);value=[...value,...hidden];}s[key]=value;
  }
@@ -69,6 +70,6 @@ export function updateState(old,changes,user,owner,gid,operators){
  for(const id of locked)if(prior.has(id)&&!s.plans.some(p=>p.id===id))fail('精算確定済みの配車は削除できません。先に月の確定を解除してください',409);
  for(const p of s.plans){if(locked.has(p.id)&&!equal(p,prior.get(p.id)))fail('精算確定済みです。先に月の確定を解除してください',409);if(!equal(p,prior.get(p.id))&&p.status==='registered')validateRegistered(s,p);}
  for(const p of old.plans)if(locked.has(p.id)&&!equal(s.events.find(e=>e.id===p.eventId),old.events.find(e=>e.id===p.eventId)))fail('精算確定済みの予定は変更できません',409);
- for(const key of ['events','tasks','notices','equipment'])if(Object.hasOwn(changes,key))for(const x of s[key]){const prev=old[key].find(y=>y.id===x.id);if(equal(x,prev))continue;x.updatedAt=new Date().toISOString();x.updatedBy=user.id;if(key==='notices'){x.author=prev?.author??user.name;x.authorId=prev?.authorId??user.id;x.date=prev?.date??today();}if(key==='tasks'){x.completedBy=x.done?user.id:null;x.completedAt=x.done?new Date().toISOString():null;}}
+ for(const key of ['events','tasks','notices','equipment'])if(Object.hasOwn(changes,key))for(const x of s[key]){const prev=old[key].find(y=>y.id===x.id);if(equal(x,prev))continue;x.updatedAt=new Date().toISOString();x.updatedBy=user.id;if(key==='notices'){x.author=prev?.author??user.name;x.authorId=prev?.authorId??user.id;x.date=prev?.date??today();}if(key==='tasks'||(key==='events'&&x.kind==='executive')){x.completedBy=x.done?user.id:null;x.completedAt=x.done?new Date().toISOString():null;}}
  return s;
 }

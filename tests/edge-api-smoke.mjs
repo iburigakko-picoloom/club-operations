@@ -34,6 +34,21 @@ try{
  sb=await patch(b,sb,{equipment:[{...equipment[0],quantity:8}],notices:[{...sb.notices[0],body:'変更'}]});assert.equal(sb.equipment[0].quantity,8);
  s=await call(endpoint,'GET',undefined,a);assert.equal(s.notices.length,2);assert.equal(s.notices.find(n=>n.id==='secret').body,'非公開');
  await patch(b,sb,{notices:s.notices},403);
+
+ // Save/reload the new relation and the existing schedule/training structures through Postgres.
+ const day=new Date().toISOString().slice(0,10),reminders=['P1M','P7D','P3D','P1D'];
+ const events=[{id:'club',kind:'club',title:'練習',date:day,start:'19:00',end:'21:00',venueId:'v1',courts:3,assignees:[]},...['ex1','ex2'].map(id=>({id,kind:'executive',title:id,date:day,start:'18:00',end:'19:00',assignees:[],notifications:reminders}))];
+ const training={categories:[],menus:[],sheets:[{id:'sheet',title:'保存済み',eventId:'club',patterns:[4,5],rows:[],context:{venue:'旧体育館',courts:3}}],history:[]};
+ s=await patch(a,s,{events,training,venues:[{id:'v1',name:'旧体育館',courts:4},{id:'v2',name:'新体育館',courts:2}]});
+ const originalEvents=structuredClone(s.events);
+ s=await patch(a,s,{venueAssignments:{club:{venueId:'v2'}}});
+ let loaded=await call(endpoint,'GET',undefined,a);assert.deepEqual(loaded.events,originalEvents);assert.deepEqual(loaded.training,training);assert.equal(loaded.venueAssignments.club.venueId,'v2');assert.equal(loaded.tasks.length,0);
+ await patch(b,loaded,{venueAssignments:{club:{venueId:'v1'}}},403);
+ await patch(a,loaded,{venueAssignments:{missing:{venueId:'v1'}}},400);
+ const completed=structuredClone(loaded.events);completed[1].done=true;
+ s=await patch(b,loaded,{events:completed});loaded=await call(endpoint,'GET',undefined,a);assert.equal(loaded.events[1].completedBy,b.user.id);assert.deepEqual(loaded.events[1].notifications,reminders);assert.equal(loaded.tasks.length,0);assert.equal(loaded.events.length,3);
+ completed[1].title='unauthorized';await patch(b,loaded,{events:completed},403);
+ s=loaded;
  const inv2=await call('/groups/'+gid+'/invite','POST',{},a);const list=await call('/groups/'+gid+'/invites','GET',undefined,a);const active=list.invites.find(i=>i.status==='active');assert.ok(active);await call('/groups/'+gid+'/invites/'+active.id+'/revoke','POST',{},a);await call('/invites/'+inv2.token,'GET',undefined,undefined,400);
  await call('/account','PATCH',{name:'変更した名前'},b);assert.equal((await call('/session','GET',undefined,b)).user.name,'変更した名前');
  await call('/groups/'+gid+'/membership','POST',{userId:b.user.id,action:'remove'},a);await call(endpoint,'GET',undefined,b,403);

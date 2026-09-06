@@ -233,3 +233,27 @@ button:not(:disabled):active,.primary:active,.secondary:active{transform:scale(.
 @keyframes ux-sheet-in{from{opacity:.4;translate:0 10px}to{opacity:1;translate:0 0}}
 @keyframes ux-fade-in{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/* Compact table editor, matching the existing white / green theme. */
+.attendance-state:not(.yes){color:#a43434;background:#fff0f0}
+.op-car-editor{padding:12px 14px 90px;max-width:100%;margin:auto}
+.op-car-editor h2{font-size:16px;margin:0 0 12px}.op-car-editor h3{font-size:13px;margin:14px 0 7px}
+.op-car-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0}
+.op-car-columns{display:flex;gap:0;overflow-x:auto;overflow-y:hidden;min-height:205px;align-items:stretch;padding:0 0 5px;touch-action:pan-x pan-y}
+.op-car-column{flex:0 0 150px;border:1px solid #dce5df;border-right:0;position:relative;padding-bottom:21px}
+.op-car-column:last-of-type{border-right:1px solid #dce5df}
+.op-car-heading{height:54px;display:flex;align-items:center;border-bottom:1px solid #dce5df;background:#f4f8f5}
+.op-car-heading .driver-slot{flex:1;min-width:0;margin:0;padding:0;display:block;border:0;background:none}
+.op-car-heading .tiny-icon{width:24px;flex:0 0 24px}
+.op-car-editor .person{display:flex;justify-content:center;align-items:center;gap:4px;width:100%;min-height:43px;margin:0;border:0;border-radius:3px;background:transparent;box-shadow:none;touch-action:auto;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;padding:6px}
+.op-car-editor .person-name{white-space:normal;overflow-wrap:anywhere;font-size:14px}
+.op-car-editor .op-driver-name{flex-direction:column;gap:0;font-weight:700}.op-driver-name small{font-size:9px;font-weight:400;color:#607365}.op-car-editor .op-driver-name .person-name{font-size:16px}
+.op-car-editor .empty-seat{height:43px;min-height:43px;width:100%;margin:0;border:0;border-radius:0;border-top:1px solid #f1f3f1;color:#809087;background:white}
+.op-car-editor .op-riders>.person{border-bottom:1px solid #eef1ef}.op-car-count{position:absolute;bottom:4px;right:7px;font-size:10px;color:#718078}
+.op-add-car{flex:0 0 80px;color:#256d3e;border:1px dashed #cad8ce;background:white;min-height:180px}
+.op-pool{padding:8px 10px;margin-top:12px;border-top:1px solid #dde4df}.op-pool.has-missing{background:#fff5f5;border:1px solid #efd4d4;border-radius:4px;color:#a43434}
+.op-pool h3{margin:0 0 8px}.op-pool-group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.op-pool-group>span{font-size:12px}.op-pool-group>div{display:flex;flex-wrap:wrap;gap:5px;flex:1}
+.op-pool .person,.op-optional .person{width:auto;min-width:70px;padding:6px 10px;min-height:36px}.op-pool .person.needed{color:#a43434;background:#fde8e8}.op-car-editor .person.selected{outline:2px solid #14813b;background:#eaf6ed}
+.op-optional{margin-top:14px}.op-optional summary{font-size:13px}.op-error{color:#a43434}.memo-text{white-space:pre-wrap}
+.op-car-editor .drop-over{background:#e1f1e5!important;outline:2px solid #14813b}
+body[data-screen="car"] .app{max-width:1100px}
+.op-car-title{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.op-missing-count{color:#a43434;background:#fff0f0;padding:3px 7px;font-size:12px;white-space:nowrap;border-radius:3px}.op-car-editor .person-name{text-align:center}
