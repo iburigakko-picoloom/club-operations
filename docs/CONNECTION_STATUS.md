@@ -10,6 +10,8 @@
 
 提供ZIPの調査で確認した精算ロック中の配車削除、取り消した配車の通知予約、配車の必須構造の検証不足を修正し、削除拒否・予約取消・保存拒否の回帰テストを追加した。
 
-GitHub Pagesで端末内保存の操作版を公開するワークフローと、永続SQLiteを使うRender共有版の定義を追加した。共有版の作成にはRenderへのログインと有料サービスの確認が必要。GitHub PagesにはDBや秘密設定を配布しない。
+GitHub Pagesでは端末内保存の操作版を公開。共有版はRender FreeとSupabase Freeへ変更した。有料ディスクは使わず、Postgresの非公開スキーマに共有データを置く。GitHub PagesにはDBや秘密設定を配布しない。
+
+無料版では休止中の通知を保証できないためPush送信を無効化。LINEはチャネル設定前のため無効。Postgresでも同じAPIテストを実行するCIを追加した。
 
 `qa/`と`QA_REPORT.md`は提供元の過去の検証記録、`docs/FILE_HASHES.json`は元ZIPのハッシュ目録。現GitHub版全体の最新結果・最新ハッシュとして扱わない。

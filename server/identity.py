@@ -100,7 +100,7 @@ def install(m):
             limit=c.execute('SELECT attempts FROM login_limits WHERE client_hash=?',(client_hash,)).fetchone()
             if limit and limit['attempts']>=FLOW_LIMIT:
                 m.fail('LINEログインの開始回数が多すぎます。10分ほど待ってから再試行してください。',429)
-            c.execute('INSERT INTO login_limits VALUES(?,?,1) ON CONFLICT(client_hash) DO UPDATE SET attempts=attempts+1',(client_hash,current))
+            c.execute('INSERT INTO login_limits VALUES(?,?,1) ON CONFLICT(client_hash) DO UPDATE SET attempts=login_limits.attempts+1',(client_hash,current))
             c.execute('DELETE FROM login_flows WHERE expires<?',(current,))
             # Supersede an earlier flow on this browser. This is not a global rate limit.
             old=req.cookies.get(FLOW_COOKIE)

@@ -92,7 +92,7 @@ def test_line_login_creates_session_not_provider_token(client,monkeypatch):
   assert c.execute('SELECT count(*) FROM identities').fetchone()[0]==1
   assert c.execute('SELECT count(*) FROM login_flows').fetchone()[0]==0
   assert c.execute('SELECT password FROM users').fetchone()[0]=='!line-only'
-  dump='\n'.join(c.iterdump());assert 'offline-not-a-real-token' not in dump and 'secret-for-offline-test' not in dump
+  dump=json.dumps({table:[dict(row) for row in c.execute('SELECT * FROM '+table)] for table in ['users','identities','sessions','login_flows']});assert 'offline-not-a-real-token' not in dump and 'secret-for-offline-test' not in dump
  assert 'invalid_state' in callback(client,q).headers['location']
 
 def test_same_line_user_is_not_duplicated(client,monkeypatch):

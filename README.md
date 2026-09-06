@@ -4,7 +4,9 @@
 
 公開中の操作版はサンプルデータ・端末内保存です。LINEログインと複数人でのデータ共有は含みません。
 
-共有版は [Renderで公開設定を開く](https://render.com/deploy?repo=https://github.com/manatocookietwitter-lang/club-operations) から設定できます。永続ディスクを利用する有料構成です。料金を確認してから作成してください。LINEは初期状態では無効で、公開後にチャネル設定が必要です。
+共有版は [Renderで公開設定を開く](https://render.com/deploy?repo=https://github.com/manatocookietwitter-lang/club-operations) から設定できます。**Render Free＋Supabase Freeの構成**です。有料ディスクは使いません。部活専用Postgresへの接続情報をRenderの秘密設定 `DATABASE_URL` に登録してください。LINEは初期状態では無効で、公開後にチャネル設定が必要です。
+
+無料公開ではアクセスのない時間にサーバーが休止し、次回表示に時間がかかる場合があります。無料DBにも容量・休止条件があります。端末間共有データは外部DBに残り、サーバーの再起動では消えません。時刻どおりのPush送信は無料の休止するサーバーでは保証できないため無効にしています。利用制限の詳細は [無料版の公開手順](docs/FREE_HOSTING.md) を参照してください。
 
 ## GitHub版の接続準備（2026-09-06）
 
@@ -75,7 +77,7 @@ Windows実機での実行は未検証です。コンテナ内のPython 3.13で�
 
 ## 共有
 
-共有版のデータは `data/club.sqlite3` に保存されます。端末のlocalStorageは正本ではありません。
+無料公開版のデータは `DATABASE_URL` で指定したPostgresへ保存されます。ローカル版では `data/club.sqlite3` を使います。端末のlocalStorageは正本ではありません。
 オーナーが設定→運営メンバー→運営メンバーを招待からリンクを発行できます。招待は7日間有効・1人1回限りです。参加先確認→ログイン→明示的な参加の順で進み、参加直後は機能の編集権限なし（担当タスクの完了は従来どおり可能）。発行済みリンクの無効化も可能です。
 部員名簿とログイン用の運営メンバーは別データです。
 

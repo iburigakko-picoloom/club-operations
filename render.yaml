@@ -1,24 +1,21 @@
-# Shared server with persistent SQLite. Paid compute and disk; review Render's
-# current estimate before creating. LINE stays disabled until its channel is set.
+# Free web service + external free Postgres. No paid disk or paid compute.
 services:
   - type: web
     name: club-operations
     runtime: python
-    plan: starter
+    plan: free
     region: singapore
     buildCommand: pip install -r requirements.txt
     startCommand: python -m uvicorn server.app:app --host 0.0.0.0 --port $PORT --no-access-log
     healthCheckPath: /api/config
     numInstances: 1
-    disk:
-      name: club-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.12
-      - key: CLUB_DB
-        value: /var/data/club.sqlite3
+      - key: DATABASE_URL
+        sync: false
+      - key: PUSH_WORKER_ENABLED
+        value: "0"
       - key: COOKIE_SECURE
         value: "1"
       - key: LINE_LOGIN_ENABLED

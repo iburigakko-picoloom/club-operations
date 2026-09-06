@@ -26,6 +26,10 @@ def stamp(): return now().isoformat()
 def fail(detail,code=400): raise HTTPException(code,detail)
 @contextmanager
 def connect():
+    if os.environ.get('DATABASE_URL'):
+        from server.database import connect as postgres_connect
+        with postgres_connect() as c:yield c
+        return
     DB_PATH.parent.mkdir(parents=True,exist_ok=True)
     c=sqlite3.connect(DB_PATH,timeout=15,isolation_level=None)
     c.row_factory=sqlite3.Row
@@ -39,6 +43,10 @@ def connect():
 
 def init_db():
     with connect() as c:
+        if os.environ.get('DATABASE_URL'):
+            from server.database import check_schema
+            check_schema(c)
+            return
         c.executescript('''
         CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,email TEXT UNIQUE NOT NULL,name TEXT NOT NULL,password TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,user_id TEXT NOT NULL,csrf TEXT NOT NULL,expires REAL NOT NULL);
@@ -247,13 +255,15 @@ def groups_for(c,uid):return [{'id':r['id'],'name':json.loads(r['data'])['group'
 
 @asynccontextmanager
 async def lifespan(app):
+    if os.environ.get('RENDER')=='true' and not os.environ.get('DATABASE_URL'):
+        raise RuntimeError('DATABASE_URL is required on Render. Local files are not persistent on the free plan.')
     if os.environ.get('LINE_LOGIN_ENABLED')=='1':
         from server.identity import line_config_errors
         errors=line_config_errors()
         if errors:raise RuntimeError('Invalid LINE configuration: '+'; '.join(errors))
-    init_db();worker=asyncio.create_task(push_worker())
+    init_db();worker=asyncio.create_task(push_worker()) if os.environ.get('PUSH_WORKER_ENABLED','1')=='1' else None
     yield
-    worker.cancel()
+    if worker:worker.cancel()
 
 app=FastAPI(lifespan=lifespan,docs_url=None,redoc_url=None)
 @app.middleware('http')
@@ -269,7 +279,7 @@ async def security(req,call_next):
     return res
 
 @app.get('/api/config')
-def config(req:Request):return {'server':True,'publicOrigin':os.environ.get('PUBLIC_ORIGIN','').rstrip('/') or str(req.base_url).rstrip('/'),'push':bool(importlib.util.find_spec('pywebpush')) and all(os.environ.get(k) for k in ['VAPID_PRIVATE_KEY','VAPID_PUBLIC_KEY','VAPID_CONTACT']),'vapidPublic':os.environ.get('VAPID_PUBLIC_KEY',''),'lineLogin':line_config()['enabled'],'passwordLogin':os.environ.get('PASSWORD_LOGIN_ENABLED','1')=='1'}
+def config(req:Request):return {'server':True,'publicOrigin':os.environ.get('PUBLIC_ORIGIN','').rstrip('/') or str(req.base_url).rstrip('/'),'push':os.environ.get('PUSH_WORKER_ENABLED','1')=='1' and bool(importlib.util.find_spec('pywebpush')) and all(os.environ.get(k) for k in ['VAPID_PRIVATE_KEY','VAPID_PUBLIC_KEY','VAPID_CONTACT']),'vapidPublic':os.environ.get('VAPID_PUBLIC_KEY',''),'lineLogin':line_config()['enabled'],'passwordLogin':os.environ.get('PASSWORD_LOGIN_ENABLED','1')=='1'}
 @app.get('/api/session')
 def session(req:Request):
     u=authenticate(req)
