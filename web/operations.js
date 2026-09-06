@@ -49,16 +49,32 @@ renderCar=function(id){
 };
 // Entire name is the handle. Movement before the hold threshold is normal scrolling.
 let opHold=null,opGhost=null,opDrag=null,opFrame=0,opSuppress=0;
-function opDragClean(){clearTimeout(opHold?.timer);opHold=null;opGhost?.remove();opGhost=null;opDrag=null;cancelAnimationFrame(opFrame);document.querySelectorAll('.drop-over').forEach(e=>e.classList.remove('drop-over'));}
+function opDragClean(){clearTimeout(opHold?.timer);opHold?.el.classList?.remove('is-dragging');opHold=null;opGhost?.remove();opGhost=null;opDrag=null;cancelAnimationFrame(opFrame);document.querySelectorAll('.drop-over').forEach(e=>e.classList.remove('drop-over'));}
+function opDragStart(){if(!opHold||opDrag)return;clearTimeout(opHold.timer);opDrag={...opHold};opHold.el.classList?.add('is-dragging');opGhost=document.createElement('div');opGhost.className='drag-ghost';opGhost.textContent=pName(opDrag.mid);document.body.appendChild(opGhost);opDragMove(opDrag.x,opDrag.y);if(!opHold.touch)try{opHold.el.setPointerCapture(opHold.id);}catch{}opFrame=requestAnimationFrame(opDragScroll);}
+function opDragMove(x,y){opDrag.x=x;opDrag.y=y;opGhost.style.transform=`translate(${x-35}px,${y-20}px)`;document.querySelectorAll('.drop-over').forEach(e=>e.classList.remove('drop-over'));opDrag.target=document.elementFromPoint(x,y)?.closest('[data-drop]');opDrag.target?.classList.add('drop-over');}
 function opDragScroll(){if(!opDrag)return;const hit=document.elementFromPoint(opDrag.x,opDrag.y),pane=hit?.closest('[data-car-scroll]');if(pane){const r=pane.getBoundingClientRect();if(opDrag.x<r.left+32)pane.scrollLeft-=9;if(opDrag.x>r.right-32)pane.scrollLeft+=9;document.querySelectorAll('.drop-over').forEach(e=>e.classList.remove('drop-over'));opDrag.target=document.elementFromPoint(opDrag.x,opDrag.y)?.closest('[data-drop]');opDrag.target?.classList.add('drop-over');}opFrame=requestAnimationFrame(opDragScroll);}
 window.addEventListener('pointerdown',ev=>{
- const el=ev.target.closest('[data-person]');if(!el||getRoute()[0]!=='car')return;ev.stopImmediatePropagation();if(el.disabled||ev.button!==0||ctx.busy||!edit('plans')||lockedPlan(getRoute()[1]))return;
- opDragClean();opHold={el,mid:el.dataset.person,id:ev.pointerId,x:ev.clientX,y:ev.clientY};opHold.timer=setTimeout(()=>{if(!opHold)return;opDrag={...opHold};opGhost=document.createElement('div');opGhost.className='drag-ghost';opGhost.textContent=pName(opDrag.mid);document.body.appendChild(opGhost);opGhost.style.transform=`translate(${opDrag.x-35}px,${opDrag.y-20}px)`;try{el.setPointerCapture(ev.pointerId);}catch{}opFrame=requestAnimationFrame(opDragScroll);},450);
+ const el=ev.target.closest('[data-person]');if(!el||getRoute()[0]!=='car')return;ev.stopImmediatePropagation();if(ev.pointerType==='touch')return;if(el.disabled||ev.button!==0||ctx.busy||!edit('plans')||lockedPlan(getRoute()[1]))return;
+ opDragClean();opHold={el,mid:el.dataset.person,id:ev.pointerId,x:ev.clientX,y:ev.clientY};opHold.mouse=ev.pointerType==='mouse';opHold.timer=setTimeout(opDragStart,450);
 },true);
-window.addEventListener('pointermove',ev=>{if(!opHold||ev.pointerId!==opHold.id)return;ev.stopImmediatePropagation();if(!opDrag){if(Math.hypot(ev.clientX-opHold.x,ev.clientY-opHold.y)>10)opDragClean();return;}ev.preventDefault();opDrag.x=ev.clientX;opDrag.y=ev.clientY;opGhost.style.transform=`translate(${ev.clientX-35}px,${ev.clientY-20}px)`;document.querySelectorAll('.drop-over').forEach(e=>e.classList.remove('drop-over'));opDrag.target=document.elementFromPoint(ev.clientX,ev.clientY)?.closest('[data-drop]');opDrag.target?.classList.add('drop-over');},{capture:true,passive:false});
-// Touch event prevents scrolling only once a stationary long press has activated the drag.
-window.addEventListener('touchmove',ev=>{if(opDrag)ev.preventDefault();},{passive:false,capture:true});
-for(const type of ['pointerup','pointercancel'])window.addEventListener(type,ev=>{if(!opHold||ev.pointerId!==opHold.id)return;ev.stopImmediatePropagation();const d=opDrag;if(d){opSuppress=Date.now()+700;lastDragUntil=opSuppress;if(type==='pointerup'&&d.target)performMove(d.mid,destinationFrom(d.target));}opDragClean();},true);
+window.addEventListener('pointermove',ev=>{if(!opHold||opHold.touch||ev.pointerId!==opHold.id)return;ev.stopImmediatePropagation();if(!opDrag){if(Math.hypot(ev.clientX-opHold.x,ev.clientY-opHold.y)<=10)return;if(opHold.mouse)opDragStart();else{opDragClean();return;}}ev.preventDefault();opDragMove(ev.clientX,ev.clientY);},{capture:true,passive:false});
+// Touch owns its gesture so native horizontal panning cannot cancel a held name.
+window.addEventListener('touchstart',ev=>{
+ const el=ev.target.closest('[data-person]');if(!el||getRoute()[0]!=='car')return;
+ if(ev.touches.length!==1){opDragClean();return;}
+ if(el.disabled||ctx.busy||!edit('plans')||lockedPlan(getRoute()[1]))return;
+ const t=ev.touches[0];opDragClean();opHold={el,mid:el.dataset.person,id:t.identifier,x:t.clientX,y:t.clientY,touch:true};opHold.timer=setTimeout(opDragStart,450);
+},{capture:true,passive:false});
+window.addEventListener('touchmove',ev=>{
+ if(!opHold?.touch)return;const t=Array.from(ev.touches).find(t=>t.identifier===opHold.id);if(!t)return;
+ if(!opDrag){if(Math.hypot(t.clientX-opHold.x,t.clientY-opHold.y)>10)opDragClean();return;}
+ ev.preventDefault();ev.stopImmediatePropagation();opDragMove(t.clientX,t.clientY);
+},{passive:false,capture:true});
+for(const type of ['touchend','touchcancel'])window.addEventListener(type,ev=>{
+ if(!opHold?.touch||!Array.from(ev.changedTouches).some(t=>t.identifier===opHold.id))return;
+ if(opDrag){ev.preventDefault();opSuppress=Date.now()+700;lastDragUntil=opSuppress;if(type==='touchend'&&opDrag.target)performMove(opDrag.mid,destinationFrom(opDrag.target));}opDragClean();
+},{capture:true,passive:false});
+for(const type of ['pointerup','pointercancel'])window.addEventListener(type,ev=>{if(!opHold||opHold.touch||ev.pointerId!==opHold.id)return;ev.stopImmediatePropagation();const d=opDrag;if(d){opSuppress=Date.now()+700;lastDragUntil=opSuppress;if(type==='pointerup'&&d.target)performMove(d.mid,destinationFrom(d.target));}opDragClean();},true);
 window.addEventListener('blur',opDragClean);
 window.addEventListener('contextmenu',ev=>{if(ev.target.closest('[data-person]')&&getRoute()[0]==='car')ev.preventDefault();});
 window.addEventListener('click',ev=>{

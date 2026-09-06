@@ -264,7 +264,7 @@ body[data-screen="car"] .app{max-width:1100px}
 .op-car-editor>.segments{min-height:30px}.op-car-editor>.segments button{min-height:30px}
 .op-car-editor>.op-car-columns{flex:3 1 0;min-height:220px;gap:16px;padding:0 0 6px;overscroll-behavior-x:contain;touch-action:pan-x;align-items:stretch}
 .op-car-section{display:flex;flex-direction:column;flex:0 0 auto;min-width:0}.op-car-section h3{margin:0;height:24px;flex-shrink:0}
-.op-car-group-cars{display:flex;flex:1;min-height:0}.op-car-column{display:flex;flex-direction:column;flex:0 0 152px;width:152px}.op-car-heading{flex-shrink:0;height:48px}
+.op-car-group-cars{display:flex;flex:1;min-height:0}.op-car-column{display:flex;flex-direction:column;flex:0 0 116px;width:116px}.op-car-heading{flex-shrink:0;height:48px}
 .op-car-editor .op-riders{display:flex;flex-direction:column;flex:1;min-height:0}.op-car-editor .op-riders>.person,.op-car-editor .op-riders>.empty-seat{flex:1;min-height:34px;height:auto}
 .op-car-editor .op-add-car{min-height:0;flex:0 0 62px;width:62px}
 .op-car-editor>.op-pool{display:flex;flex-direction:column;flex:2 1 0;min-height:190px;padding:8px;margin:0;overflow:hidden}.op-pool h3{height:20px;margin:0 0 4px;font-size:12px}
@@ -277,3 +277,5 @@ body[data-screen="car"] .app{max-width:1100px}
 .header .op-header-title{min-width:0;font-size:15px;line-height:1.25}.op-header-title small{display:block;font-size:11px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 
 .op-car-editor .person-name{font-size:16px}.op-car-editor .op-driver-name .person-name{font-size:18px}.op-car-editor .op-people-group>span{font-size:12px}
+
+.op-car-editor .person{cursor:grab}.op-car-editor .person.is-dragging{opacity:.35;outline:2px solid #14813b}.op-car-editor .op-car-heading{height:56px}.op-car-editor .op-riders>.person{margin:3px 4px;width:calc(100% - 8px);background:#f6f8f6;border:1px solid #e2e8e3;border-radius:4px}.op-car-editor .op-riders>.empty-seat{margin:3px 4px;width:calc(100% - 8px);border:1px dashed #d5dfd7;border-radius:4px}.op-car-editor .op-car-heading .tiny-icon{width:20px;flex-basis:20px;min-width:20px}.op-car-editor .op-car-columns{gap:12px}
