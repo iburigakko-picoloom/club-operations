@@ -1,7 +1,7 @@
 /* Calendar interaction adapted from Hitotsu Calendar; shared club records stay authoritative. */
 'use strict';
 function calVenueName(item){return item?.type==='event'&&item.kind==='club'?(eventVenue(event(item.id))?.name||''):'';}
-function calItems(day){const items=D.calendarItems(state,day,ui.calendarSelf||ui.showExec);if(!ui.calendarSelf)return items;const mine=new Set(operationalTasks().filter(t=>!t.done&&!t.deleted&&ownTask(t)).map(t=>t.executiveId?'event:'+t.executiveId:'task:'+t.id));return items.filter(x=>mine.has(x.type+':'+x.id));}
+function calItems(day,personal=ui.calendarSelf){const items=D.calendarItems(state,day,personal||ui.showExec);if(!personal)return items;const mine=new Set(operationalTasks().filter(t=>!t.done&&!t.deleted&&ownTask(t)).map(t=>t.executiveId?'event:'+t.executiveId:'task:'+t.id));return items.filter(x=>mine.has(x.type+':'+x.id));}
 const clubCalendar={selected:new Set(),selecting:false,group:null,suppressClick:0};
 const CAL_COLORS=[['green','#9FCA8B','緑'],['blue','#78AEDD','青'],['yellow','#F6C744','黄'],['orange','#F2A15F','橙'],['red','#E98585','赤'],['pink','#EAA7C2','桃'],['purple','#B9A0D9','紫'],['teal','#75C6B5','青緑'],['gray','#BFC4C7','灰']];
 function calColor(e){return CAL_COLORS.find(c=>c[0]===e?.colorId)?.[1]||(e?.kind==='executive'?'#B9A0D9':e?.kind==='task'?'#F6C744':'#9FCA8B');}
@@ -13,10 +13,10 @@ renderCalendar=function(){
  const first=`${y}-${String(m+1).padStart(2,'0')}-01`;let cells='';
  for(let i=0;i<count;i++){
   const date=D.addDays(first,i-offset),items=calItems(date),selected=clubCalendar.selected.has(date),primary=items[0],hex=calColor(primary?.type==='event'?event(primary.id):primary);
-  cells+=`<button type="button" class="cal-day ${date.slice(0,7)!==first.slice(0,7)?'outside':''} ${date===DEMO_TODAY?'today':''} ${selected?'selected':''} ${items.length?'has-event':''}" style="--event-bg:${hex}60" data-act="cal-day" data-date="${date}" aria-pressed="${selected}" aria-label="${date} ${esc(items.map(x=>x.title).join('、')||'予定なし')}"><span class="cal-number">${Number(date.slice(-2))}</span>${items.slice(0,1).map(item=>{const e=item.type==='event'?event(item.id):item,period=e.endDate>e.date;return `<span class="cal-event ${period?'period':''}" data-cal-id="${esc(item.id)}" data-cal-type="${item.type}" style="--event-color:${calColor(e)}">${esc(item.title)}</span>${calVenueName(item)?`<span class="cal-venue">${esc(calVenueName(item).replaceAll('体育館','').trim())}</span>`:''}`;}).join('')}${items.length>1?`<span class="cal-more">＋${items.length-1}件</span>`:''}</button>`;
+  cells+=`<button type="button" class="cal-day ${date.slice(0,7)!==first.slice(0,7)?'outside':''} ${date===DEMO_TODAY?'today':''} ${selected?'selected':''} ${items.length?'has-event':''}" style="--event-bg:${hex}60" data-act="cal-day" data-date="${date}" aria-pressed="${selected}" aria-label="${date} ${esc(items.map(x=>x.title).join('、')||'予定なし')}"><span class="cal-number">${Number(date.slice(-2))}</span>${items.slice(0,3).map(item=>{const e=item.type==='event'?event(item.id):item,period=e.endDate>e.date;return `<span class="cal-event ${period?'period':''}" data-cal-id="${esc(item.id)}" data-cal-type="${item.type}" style="--event-color:${calColor(e)}">${esc(item.title)}</span>${calVenueName(item)?`<span class="cal-venue">${esc(calVenueName(item).replaceAll('体育館','').trim())}</span>`:''}`;}).join('')}${items.length>3?`<span class="cal-more">＋${items.length-3}件</span>`:''}</button>`;
  }
- const selection=clubCalendar.selecting?`<div class="cal-selection" role="region" aria-label="日付の選択"><div>${action('cal-clear','×','aria-label="選択を終了"','icon-btn')}<strong>${clubCalendar.selected.size}日を選択</strong></div><div>${action('cal-selected-add','＋ 予定',clubCalendar.selected.size?'':'disabled','primary')}${action('cal-color','色',clubCalendar.selected.size?'':'disabled','secondary')}${action('cal-cancel','中止',clubCalendar.selected.size?'':'disabled','secondary')}</div></div>`:'';
- return shell('予定','calendar',`<section class="cal-surface"><div class="cal-month">${action('month','‹','data-dir="-1" aria-label="前の月"','icon-btn')}${action('cal-month',`${y}年${m+1}月`,'','cal-month-label')}${action('month','›','data-dir="1" aria-label="次の月"','icon-btn')}${action('cal-today','今日','','text-btn')}</div>${segments([['club','部活のみ'],['all','幹部'],['self','自分']],ui.calendarSelf?'self':ui.showExec?'all':'club','calendar-filter')}<div class="cal-grid" style="--weeks:${count/7}" aria-label="月間カレンダー">${'日月火水木金土'.split('').map(x=>`<div class="cal-weekday">${x}</div>`).join('')}${cells}</div><div class="cal-footer">${!ui.calendarSelf&&edit('events')?action('cal-select','複数の日付を選択','','text-btn'):''}${!ui.calendarSelf?action('wf-calendar-image','予定表を画像にする','','text-btn'):''}</div>${selection}</section>`,'',(ui.calendarSelf?edit('tasks'):edit('events'))?action('cal-add',icon('plus'),'aria-label="予定を追加"','icon-btn'):'');
+ const selection=clubCalendar.selecting?`<div class="cal-selection" role="region" aria-label="日付の選択"><div>${action('cal-clear','×','aria-label="選択を終了"','icon-btn')}<strong>${clubCalendar.selected.size}日を選択</strong></div><div>${action('cal-selected-add','＋ 予定',clubCalendar.selected.size?'':'disabled','primary')}${!ui.calendarSelf?action('cal-color','色',clubCalendar.selected.size?'':'disabled','secondary')+action('cal-cancel','中止',clubCalendar.selected.size?'':'disabled','secondary'):''}</div></div>`:'';
+ return shell('予定','calendar',`<section class="cal-surface"><div class="cal-month">${action('month','‹','data-dir="-1" aria-label="前の月"','icon-btn')}${action('cal-month',`${y}年${m+1}月`,'','cal-month-label')}${action('month','›','data-dir="1" aria-label="次の月"','icon-btn')}${action('cal-today','今日','','text-btn')}</div>${segments([['club','部活のみ'],['all','幹部'],['self','自分']],ui.calendarSelf?'self':ui.showExec?'all':'club','calendar-filter')}<div class="cal-grid" style="--weeks:${count/7}" aria-label="月間カレンダー">${'日月火水木金土'.split('').map(x=>`<div class="cal-weekday">${x}</div>`).join('')}${cells}</div><div class="cal-footer">${(ui.calendarSelf?edit('tasks'):edit('events'))?action('cal-select','複数の日付を選択','','text-btn'):''}${action('wf-calendar-image','予定表を画像にする','','text-btn')}</div>${selection}</section>`,'',(ui.calendarSelf?edit('tasks'):edit('events'))?action('cal-add',icon('plus'),'aria-label="予定を追加"','icon-btn'):'');
 };
 function calChoices(){modal('予定を入れる',`${ui.showExec&&edit('tasks')?'<a class="row" href="#task-edit" data-act="close-modal">やることの期限を追加</a>':''}<div class="cal-choices">${[['single','1日','日付を1つ指定'],['multiple','複数の日付','離れた日をまとめて選択'],['period','期間','連続する日を同じ色で表示'],['weekly','曜日指定','毎週の練習を一括登録']].map(([mode,title,sub])=>action('cal-mode',`<span><strong>${title}</strong><small>${sub}</small></span>${icon('chev')}`,`data-mode="${mode}"`,'row')).join('')}</div>`);}
 function calEditor({id='',date=DEMO_TODAY,mode='single',dates=[]}={}){
@@ -31,9 +31,9 @@ function calCommit(){D.seedAttendance(state);persist();closeModal();calClear();r
 window.addEventListener('click',ev=>{
  const b=ev.target.closest('[data-act^="cal-"]');if(!b||b.disabled)return;actHandled(ev);if(ctx.busy){toast('保存中です');return;}
  const {act,date,id,mode}=b.dataset;
- if(ui.calendarSelf&&act==='cal-add'){go('task-edit');return;}
- if(ui.calendarSelf&&act==='cal-day'){if(Date.now()<clubCalendar.suppressClick)return;go('day/'+date);return;}
- if(!['cal-day','cal-today','cal-month','cal-clear'].includes(act)&&!edit('events')){toast('編集権限がありません');return;}
+ if(ui.calendarSelf&&['cal-add','cal-selected-add','cal-new-day'].includes(act)){if(!edit('tasks')){toast('編集権限がありません');return;}calSelfEditor(act==='cal-selected-add'?[...clubCalendar.selected].sort():[date||DEMO_TODAY]);return;}
+ if(ui.calendarSelf&&act==='cal-day'&&!clubCalendar.selecting){if(Date.now()<clubCalendar.suppressClick)return;const items=calItems(date);modal(jpDate(date,true),items.map(x=>`<a class="row" href="#${x.type}/${esc(x.id)}" data-act="close-modal"><span class="row-main">${esc(x.title)}</span><span>${esc(x.time||'')}</span></a>`).join('')+(edit('tasks')?action('cal-new-day','＋ 予定を追加',`data-date="${date}"`,'secondary full'):''));return;}
+ if(!['cal-day','cal-today','cal-month','cal-clear'].includes(act)&&!edit(ui.calendarSelf?'tasks':'events')){toast('編集権限がありません');return;}
  switch(act){
  case'cal-day':{
   if(Date.now()<clubCalendar.suppressClick)return;
@@ -61,6 +61,7 @@ window.addEventListener('submit',ev=>{
  const fd=new FormData(f),get=n=>String(fd.get(n)||'').trim();
  try{
   if(form==='cal-month'){const value=get('month');if(!D.validDate(value+'-01'))throw Error('年月を確認してください');ui.calendarYear=Number(value.slice(0,4));ui.calendarMonth=Number(value.slice(5))-1;closeModal();render();return;}
+  if(form==='cal-self'){if(!edit('tasks'))throw Error('編集権限がありません');const dates=get('date')?[get('date')]:fd.getAll('selectedDate');if(!dates.length||dates.some(d=>!D.validDate(d))||!D.validTime(get('time'))||!get('title'))throw Error('名前・日程・時刻を確認してください');checkpoint();for(const date of [...new Set(dates)])state.tasks.push({id:UID(),title:get('title'),date,time:get('time'),assignees:[state.currentUser],memo:get('memo'),notifications:fd.getAll('notify'),done:false,assignmentNeedsReview:false});calCommit();return;}
   if(!edit('events'))throw Error('編集権限がありません');
   if(form==='cal-color'){checkpoint();calTargets().forEach(e=>e.colorId=get('colorId'));calCommit();return;}
   const old=event(f.dataset.id),mode=f.dataset.mode,selected=fd.getAll('selectedDate'),date=mode==='multiple'?selected[0]:get('date'),endDate=mode==='period'?get('endDate'):date,start=get('start'),end=get('end');
@@ -94,8 +95,8 @@ function calDragClear(){clearTimeout(calPressTimer);calPressTimer=null;calPress=
 window.addEventListener('pointerdown',ev=>{
  const b=ev.target.closest('[data-act="cal-day"]');if(!b||ctx.busy||ev.button!==0)return;
  const chip=ev.target.closest('[data-cal-id]'),items=calItems(b.dataset.date),item=chip?items.find(x=>x.id===chip.dataset.calId&&x.type===chip.dataset.calType):items.length===1?items[0]:null;
- if(ui.calendarSelf&&!item)return;
- if(!edit(item?.type==='task'?'tasks':'events'))return;
+ if(ui.calendarSelf&&!item&&!edit('tasks'))return;
+ if(!edit(item?.type==='task'||ui.calendarSelf?'tasks':'events'))return;
  calPress={x:ev.clientX,y:ev.clientY,date:b.dataset.date,id:ev.pointerId,item,active:false,group:state.group.id};
  calPressTimer=setTimeout(()=>{if(!calPress)return;calPressTimer=null;clubCalendar.suppressClick=Date.now()+700;
   if(item&&!clubCalendar.selecting){calPress.active=true;calGhost=document.createElement('div');calGhost.className='drag-ghost';calGhost.textContent=item.title;document.body.appendChild(calGhost);calGhost.style.transform=`translate(${calPress.x-35}px,${calPress.y-20}px)`;try{b.setPointerCapture(ev.pointerId);}catch{}}
@@ -118,3 +119,5 @@ window.addEventListener('hashchange',calDragClear);
 window.addEventListener('contextmenu',ev=>{if(ev.target.closest('[data-act="cal-day"]')&&edit('events'))ev.preventDefault();});
 
 window.addEventListener('click',ev=>{const b=ev.target.closest('[data-act="calendar-filter"]');if(!b||b.disabled)return;actHandled(ev);ui.calendarSelf=b.dataset.value==='self';ui.showExec=b.dataset.value==='all';calClear();render();},true);
+
+function calSelfEditor(dates){modal('自分の予定を追加',`<form data-form="cal-self">${field('名前','title','','text','required maxlength="200"')}${dates.length===1?field('日程','date',dates[0],'date','required'):dates.map(d=>`<input type="hidden" name="selectedDate" value="${esc(d)}">`).join('')+`<p class="cal-date-summary">${dates.map(d=>jpDate(d)).join('、')}</p>`}${field('期限時刻','time','23:59','time','required')}${memoField('')}${notifications(state.settings.reminders)}<p class="cal-error" role="alert"></p><div class="form-actions"><button class="primary full">保存</button></div></form>`);}
