@@ -10,7 +10,7 @@ renderEvent=function(id){const e=event(id);if(!e)return opEvent(id);if(e.kind===
 renderEventEdit=function(id,day){return shell('予定','calendar',action('op-event-edit','予定を編集',`data-id="${esc(id||'')}" data-date="${esc(day||DEMO_TODAY)}"`,'primary full'),id?'event/'+id:'calendar');};
 const opTaskEdit=renderTaskEdit;
 renderTaskEdit=function(id,related=''){if(related&&event(related)?.kind==='executive')return renderEvent(related);return opTaskEdit(id,related);};
-renderDay=function(day){return shell(jpDate(day,true),'calendar',calItems(day).map(x=>`<a class="row" href="#${x.type}/${esc(x.id)}"><span class="row-main">${esc(x.title)}</span><span>${esc(x.time)}</span></a>`).join('')||'<p class="empty">予定はありません</p>','calendar');};
+renderDay=function(day){return shell(jpDate(day,true),'calendar',calItems(day).map(x=>`<a class="row" href="#${x.type}/${esc(x.id)}"><span class="row-main">${esc(x.title)}</span><span>${x.type==='task'?'':esc(x.time)}</span></a>`).join('')||'<p class="empty">予定はありません</p>','calendar');};
 let opVenueTab='assign',opVenueId='',opVenueGroup='',opVenueMonth=null;
 renderVenues=function(){
  if(opVenueGroup!==state.group.id){opVenueGroup=state.group.id;opVenueId='';opVenueTab='assign';opVenueMonth=null;}

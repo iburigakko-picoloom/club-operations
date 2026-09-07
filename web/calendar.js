@@ -61,7 +61,7 @@ window.addEventListener('submit',ev=>{
  const fd=new FormData(f),get=n=>String(fd.get(n)||'').trim();
  try{
   if(form==='cal-month'){const value=get('month');if(!D.validDate(value+'-01'))throw Error('年月を確認してください');ui.calendarYear=Number(value.slice(0,4));ui.calendarMonth=Number(value.slice(5))-1;closeModal();render();return;}
-  if(form==='cal-self'){if(!edit('tasks'))throw Error('編集権限がありません');const dates=get('date')?[get('date')]:fd.getAll('selectedDate');if(!dates.length||dates.some(d=>!D.validDate(d))||!D.validTime(get('time'))||!get('title'))throw Error('名前・日程・時刻を確認してください');checkpoint();for(const date of [...new Set(dates)])state.tasks.push({id:UID(),title:get('title'),date,time:get('time'),assignees:[state.currentUser],memo:get('memo'),notifications:fd.getAll('notify'),done:false,assignmentNeedsReview:false});calCommit();return;}
+  if(form==='cal-self'){if(!edit('tasks'))throw Error('編集権限がありません');const dates=get('date')?[get('date')]:fd.getAll('selectedDate');if(!dates.length||dates.some(d=>!D.validDate(d))||!D.validTime(get('time'))||!get('title'))throw Error('名前・日程を確認してください');checkpoint();for(const date of [...new Set(dates)])state.tasks.push({id:UID(),title:get('title'),date,time:get('time'),assignees:[state.currentUser],memo:get('memo'),notifications:fd.getAll('notify'),done:false,assignmentNeedsReview:false});calCommit();return;}
   if(!edit('events'))throw Error('編集権限がありません');
   if(form==='cal-color'){checkpoint();calTargets().forEach(e=>e.colorId=get('colorId'));calCommit();return;}
   const old=event(f.dataset.id),mode=f.dataset.mode,selected=fd.getAll('selectedDate'),date=mode==='multiple'?selected[0]:get('date'),endDate=mode==='period'?get('endDate'):date,start=get('start'),end=get('end');
@@ -120,7 +120,7 @@ window.addEventListener('contextmenu',ev=>{if(ev.target.closest('[data-act="cal-
 
 window.addEventListener('click',ev=>{const b=ev.target.closest('[data-act="calendar-filter"]');if(!b||b.disabled)return;actHandled(ev);ui.calendarSelf=b.dataset.value==='self';ui.showExec=b.dataset.value==='all';calClear();render();},true);
 
-function calSelfEditor(dates){modal('自分の予定を追加',`<form data-form="cal-self">${field('名前','title','','text','required maxlength="200"')}${dates.length===1?field('日程','date',dates[0],'date','required'):dates.map(d=>`<input type="hidden" name="selectedDate" value="${esc(d)}">`).join('')+`<p class="cal-date-summary">${dates.map(d=>jpDate(d)).join('、')}</p>`}${field('期限時刻','time','23:59','time','required')}${memoField('')}${notifications(state.settings.reminders)}<p class="cal-error" role="alert"></p><div class="form-actions"><button class="primary full">保存</button></div></form>`);}
+function calSelfEditor(dates){modal('自分の予定を追加',`<form data-form="cal-self">${field('名前','title','','text','required maxlength="200"')}${dates.length===1?field('日程','date',dates[0],'date','required'):dates.map(d=>`<input type="hidden" name="selectedDate" value="${esc(d)}">`).join('')+`<p class="cal-date-summary">${dates.map(d=>jpDate(d)).join('、')}</p>`}<input type="hidden" name="time" value="09:00">${memoField('')}${notifications(state.settings.reminders)}<p class="cal-error" role="alert"></p><div class="form-actions"><button class="primary full">保存</button></div></form>`);}
 
 function calSwipeDirection(dx,dy,elapsed){return elapsed<650&&Math.abs(dx)>=55&&Math.abs(dx)>Math.abs(dy)*1.6?(dx<0?1:-1):0;}
 let calSwipe=null,calSlide=null,calSwipeVisual=null;
