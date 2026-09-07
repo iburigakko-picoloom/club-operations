@@ -11,15 +11,16 @@ renderEventEdit=function(id,day){return shell('予定','calendar',action('op-eve
 const opTaskEdit=renderTaskEdit;
 renderTaskEdit=function(id,related=''){if(related&&event(related)?.kind==='executive')return renderEvent(related);return opTaskEdit(id,related);};
 renderDay=function(day){return shell(jpDate(day,true),'calendar',calItems(day).map(x=>`<a class="row" href="#${x.type}/${esc(x.id)}"><span class="row-main">${esc(x.title)}</span><span>${esc(x.time)}</span></a>`).join('')||'<p class="empty">予定はありません</p>','calendar');};
-let opVenueTab='assign',opVenueId='',opVenueGroup='';
+let opVenueTab='assign',opVenueId='',opVenueGroup='',opVenueMonth=null;
 renderVenues=function(){
- if(opVenueGroup!==state.group.id){opVenueGroup=state.group.id;opVenueId='';opVenueTab='assign';}
+ if(opVenueGroup!==state.group.id){opVenueGroup=state.group.id;opVenueId='';opVenueTab='assign';opVenueMonth=null;}
+ if(opVenueMonth===null)opVenueMonth=new Date().getMonth()+1;
  if(!venue(opVenueId))opVenueId=state.venues[0]?.id||'';
  const tabs=segments([['assign','日程への割当'],['venues','体育館編集'],['booking','体育館取り']],opVenueTab,'op-venue-tab');
  if(opVenueTab==='booking')return shell('体育館','operations',tabs+'<p class="empty">体育館取り支援ツール · 準備中</p>','operations');
  if(opVenueTab==='venues')return shell('体育館','operations',tabs+state.venues.map(v=>`<a class="row" href="#venue-edit/${esc(v.id)}"><span class="row-main">${esc(v.name)}</span><span>${v.courts}面</span>${icon('chev')}</a>`).join(''),'operations',edit('venues')?`<a class="icon-btn" href="#venue-edit" aria-label="体育館を追加">${icon('plus')}</a>`:'');
- const days=clubEvents().filter(e=>(e.endDate||e.date)>=DEMO_TODAY);
- return shell('体育館','operations',tabs+(state.venues.length?`<form data-form="op-venue-assign"><label class="field"><span class="label">体育館</span><select name="venueId" ${edit('venues')?'':'disabled'}>${state.venues.map(v=>`<option value="${esc(v.id)}" ${opVenueId===v.id?'selected':''}>${esc(v.name)}</option>`).join('')}</select></label>${days.map(e=>`<label class="row"><input type="checkbox" name="eventId" value="${esc(e.id)}" ${edit('venues')?'':'disabled'}><span class="row-main">${jpDate(e.date)}${e.endDate>e.date?'〜'+jpDate(e.endDate):''}　${esc(e.title)}</span><span class="row-sub">${esc(eventVenue(e)?.name||'未設定')}</span></label>`).join('')||'<p class="empty">今後の部活予定がありません</p>'}${edit('venues')&&days.length?'<div class="sticky-action"><button class="primary full">適用</button></div>':''}<p class="op-error" role="alert"></p></form>`:`<p class="empty">体育館を登録してください</p>${edit('venues')?'<a class="primary full" href="#venue-edit">体育館を追加</a>':''}`),'operations');
+ const days=clubEvents().filter(e=>(e.endDate||e.date)>=DEMO_TODAY&&Number(e.date.slice(5,7))===opVenueMonth);
+ return shell('体育館','operations',tabs+(state.venues.length?`<form data-form="op-venue-assign"><div class="op-venue-filters"><label class="field"><span class="label">月</span><select name="venueMonth" aria-label="割当する月">${Array.from({length:12},(_,i)=>`<option value="${i+1}" ${opVenueMonth===i+1?'selected':''}>${i+1}月</option>`).join('')}</select></label><label class="field"><span class="label">体育館</span><select name="venueId" ${edit('venues')?'':'disabled'}>${state.venues.map(v=>`<option value="${esc(v.id)}" ${opVenueId===v.id?'selected':''}>${esc(v.name)}</option>`).join('')}</select></label></div>${days.map(e=>`<label class="row"><input type="checkbox" name="eventId" value="${esc(e.id)}" ${edit('venues')?'':'disabled'}><span class="row-main">${jpDate(e.date)}${e.endDate>e.date?'〜'+jpDate(e.endDate):''}　${esc(e.title)}</span><span class="row-sub">${esc(eventVenue(e)?.name||'未設定')}</span></label>`).join('')||'<p class="empty">この月の今後の部活予定はありません</p>'}${edit('venues')&&days.length?'<div class="sticky-action"><button class="primary full">適用</button></div>':''}<p class="op-error" role="alert"></p></form>`:`<p class="empty">体育館を登録してください</p>${edit('venues')?'<a class="primary full" href="#venue-edit">体育館を追加</a>':''}`),'operations');
 };
 window.addEventListener('click',async ev=>{
  const b=ev.target.closest('[data-act^="op-"]');if(!b||b.disabled)return;actHandled(ev);const d=b.dataset;
@@ -31,6 +32,7 @@ window.addEventListener('click',async ev=>{
   if(d.act==='op-exec-toggle'){const e=event(d.id);if(!e||e.kind!=='executive'||e.cancelled)throw Error('予定を確認してください');if(!edit('events')&&!ownTask(e))throw Error('担当者ではありません');await wfSave(()=>{e.done=!e.done;e.completedAt=e.done?new Date().toISOString():null;e.completedBy=e.done?state.currentUser:null;});}
  }catch(error){toast(error.message);}
 },true);
+window.addEventListener('change',ev=>{const f=ev.target.closest('[data-form="op-venue-assign"]');if(!f)return;if(ev.target.name==='venueId')opVenueId=ev.target.value;if(ev.target.name==='venueMonth'){opVenueId=f.elements.venueId.value;opVenueMonth=Number(ev.target.value);render();}},true);
 window.addEventListener('submit',async ev=>{
  const f=ev.target;if(f.dataset.form!=='op-venue-assign')return;actHandled(ev);const fd=new FormData(f),vid=String(fd.get('venueId')||''),ids=fd.getAll('eventId');
  try{if(!edit('venues'))throw Error('編集権限がありません');if(!venue(vid)||!ids.length)throw Error('体育館と日程を選択してください');
