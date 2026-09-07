@@ -79,6 +79,7 @@ jobs:
         run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f server/postgres_schema.sql
       - name: Check and run the production handler
         run: |
+          deno run --allow-env --config supabase/functions/club-api/deno.json tests/push-encryption.mjs
           deno check --config supabase/functions/club-api/deno.json supabase/functions/club-api/index.ts
           deno run --allow-env --allow-net --config supabase/functions/club-api/deno.json supabase/functions/club-api/index.ts > /tmp/club-edge.log 2>&1 &
           for i in $(seq 1 30); do curl --fail --silent http://localhost:8000/club-api/config && break || sleep 1; done
