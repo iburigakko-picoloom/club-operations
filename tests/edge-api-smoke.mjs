@@ -11,13 +11,24 @@ async function call(path,method='GET',data,session,expected=200,extra={}){
  const r=await fetch(base+path,{method,headers:{Origin:origin,'Content-Type':'application/json',...(session?{Authorization:'Bearer '+session.token,'X-CSRF-Token':session.csrf}:{}),...extra},body:data===undefined?undefined:JSON.stringify(data)});let b;try{b=await r.json();}catch{b={detail:'Non-JSON response'};}assert.equal(r.status,expected,`${method} ${path}: ${JSON.stringify(b)}`);assert.equal(r.headers.get('cache-control'),'no-store');checks++;return b;
 }
 try{
- const config=await call('/config');assert.equal(config.hosting,'supabase');assert.equal(config.push,false);
+ const config=await call('/config');assert.equal(config.hosting,'supabase');assert.equal(typeof config.push,'boolean');
  await call('/session','GET',undefined,undefined,401);
  await call('/config','GET',undefined,undefined,403,{Origin:'https://evil.example'});
  const preflight=await fetch(base+'/groups',{method:'OPTIONS',headers:{Origin:origin,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'authorization, content-type, x-csrf-token'}});assert.equal(preflight.status,204);assert.equal(preflight.headers.get('access-control-allow-origin'),origin);checks++;
  const a=await call('/register','POST',{email:emails[0],password,name:'公開検証A'});users.push(a.user.id);await record();assert.ok(a.token&&!a.user.password);
  await call('/groups','POST',{name:'拒否される'},a,403,{'X-CSRF-Token':'wrong'});
  let s=await call('/groups','POST',{name:'公開検証 '+run},a);const gid=s.group.id;groups.push(gid);await record();
+ // Notification registration is isolated to the CI database; never register fake devices in production.
+ if(new URL(base).hostname==='localhost'){
+  const sub={endpoint:'https://web.push.apple.com/ci-'+run,keys:{p256dh:Buffer.alloc(65,4).toString('base64url'),auth:Buffer.alloc(16,1).toString('base64url')}};
+  await call('/push/subscription','POST',{subscription:sub},undefined,401);
+  await call('/push/subscription','POST',{subscription:{...sub,endpoint:'https://127.0.0.1/'}},a,400);
+  await call('/push/subscription','POST',{subscription:sub},a,403,{'X-CSRF-Token':'wrong'});
+  await call('/push/subscription','POST',{subscription:sub},a);
+  await call('/push/test','POST',{groupId:gid},a);
+  await call('/push/test','POST',{groupId:gid},a,429);
+  await call('/push/subscription','DELETE',{endpoint:sub.endpoint},a);
+ }
  const endpoint='/groups/'+gid+'/state',patch=(who,state,changes,status=200)=>call(endpoint,'PATCH',{version:state.version,changes},who,status);
  const initial=s;
  const equipment=[{id:'ball',name:'ボール',quantity:10,unit:'個',threshold:2}];s=await patch(a,s,{equipment});

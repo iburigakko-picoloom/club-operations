@@ -473,7 +473,7 @@ def schedule_jobs(c,gid,s,old,operators,owner):
                 identity=f'{gid}|{typ}|{obj["id"]}|{uid}|{offset}|{due.isoformat()}|{obj.get("title","")}'
                 jid=hashlib.sha256(identity.encode()).hexdigest();payload={'title':obj.get('title','配車を確認'),'body':dt.strftime('%m/%d %H:%M'),'url':f'/#group-open/{gid}/{route}','groupId':gid,'resourceId':obj['id'],'resourceType':typ}
                 # Previously delivered identical jobs stay delivered; cancelled future jobs can reactivate.
-                c.execute("INSERT INTO jobs VALUES(?,?,?,?,?,'pending',0) ON CONFLICT(id) DO UPDATE SET status=CASE WHEN jobs.status='cancelled' THEN 'pending' ELSE jobs.status END",(jid,gid,uid,due.timestamp(),json.dumps(payload,ensure_ascii=False)))
+                c.execute("INSERT INTO jobs(id,group_id,recipient,due,payload,status,attempts) VALUES(?,?,?,?,?,'pending',0) ON CONFLICT(id) DO UPDATE SET status=CASE WHEN jobs.status='cancelled' THEN 'pending' ELSE jobs.status END",(jid,gid,uid,due.timestamp(),json.dumps(payload,ensure_ascii=False)))
     for typ,items in [('event',s['events']),('task',s['tasks'])]:
         for x in items:
             if x.get('cancelled') or x.get('done') or x.get('deleted'):continue
@@ -495,7 +495,7 @@ def schedule_jobs(c,gid,s,old,operators,owner):
             if not targeted(s,n,uid):continue
             jid=hashlib.sha256(f'{gid}|notice|{n["id"]}|{n.get("notifyVersion",1)}|{uid}'.encode()).hexdigest()
             payload={'title':n['title'],'body':s['group']['name'],'url':f'/#group-open/{gid}/notice/{n["id"]}','groupId':gid,'resourceId':n['id'],'resourceType':'notice'}
-            c.execute("INSERT OR IGNORE INTO jobs VALUES(?,?,?,?,?,'pending',0)",(jid,gid,uid,time.time(),json.dumps(payload,ensure_ascii=False)))
+            c.execute("INSERT OR IGNORE INTO jobs(id,group_id,recipient,due,payload,status,attempts) VALUES(?,?,?,?,?,'pending',0)",(jid,gid,uid,time.time(),json.dumps(payload,ensure_ascii=False)))
 @app.post('/api/push/subscription')
 async def push_subscription(req:Request):
     u=mutation(req);b=await body(req);sub=b.get('subscription',{});url=urlparse(str(sub.get('endpoint','')))
