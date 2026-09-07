@@ -83,11 +83,11 @@ export function createApi({transaction,lineConfig=()=>({enabled:false}),exchange
  }
  return async req=>{
   const headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Vary':'Origin'};
-  const origin=req.headers.get('origin');if(origin===allowedOrigin){headers['Access-Control-Allow-Origin']=allowedOrigin;headers['Access-Control-Allow-Headers']='authorization, content-type, x-csrf-token';headers['Access-Control-Allow-Methods']='GET, POST, PATCH, OPTIONS';}
+  const origin=req.headers.get('origin');if(origin===allowedOrigin){headers['Access-Control-Allow-Origin']=allowedOrigin;headers['Access-Control-Allow-Headers']='authorization, content-type, x-csrf-token';headers['Access-Control-Allow-Methods']='GET, POST, PATCH, DELETE, OPTIONS';}
   const response=(data,status=200)=>new Response(JSON.stringify(data),{status,headers});
   if(origin&&origin!==allowedOrigin)return response({detail:'送信元が一致しません'},403);
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers});
-  try{const url=new URL(req.url),path=url.pathname.replace(/^\/functions\/v1\/club-api/,'').replace(/^\/club-api/,'');const b=['POST','PATCH'].includes(req.method)?await readBody(req):{};return response(await route(req,path,b));}
+  try{const url=new URL(req.url),path=url.pathname.replace(/^\/functions\/v1\/club-api/,'').replace(/^\/club-api/,'');const b=['POST','PATCH','DELETE'].includes(req.method)?await readBody(req):{};return response(await route(req,path,b));}
   catch(e){if(e instanceof HttpError)return response({detail:e.message},e.status);if(e?.code==='23505')return response({detail:'同じデータがすでに登録されています'},409);console.error('club-api failure',e?.code||e?.name||'Error');return response({detail:'サーバーとの接続を確認して再試行してください'},503);}
  };
 }
