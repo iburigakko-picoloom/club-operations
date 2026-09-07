@@ -288,6 +288,8 @@ body[data-screen="car"] .app{max-width:1100px}
 .op-empty-driver{display:flex;align-items:center;justify-content:center;width:calc(100% - 8px);min-height:44px;margin:4px;border:1px dashed #9cb7a4;border-radius:4px;background:#fff;color:#42634d;font-size:15px}.op-empty-driver.drop-over{border-style:solid}
 
 .op-people-group.op-optional-end{border-left:1px solid #c8dfce;padding-left:12px}.op-people-group.op-optional-end>span:first-child{color:#376e49}
+
+.op-car-editor .person-name{white-space:nowrap;overflow-wrap:normal;width:100%;max-width:100%;text-overflow:clip}.op-car-editor .op-driver-name .person-name{flex:0 0 auto}
 </style></head><body><div class="app" id="app"></div><div id="modal-root"></div><div id="toast-root" aria-live="polite"></div><script>'use strict';
 const clubSessionKey='club-operations-session-v1';
 const clubFlowKey='club-operations-line-flow-v1';
@@ -1339,8 +1341,11 @@ window.addEventListener('click',ev=>{
  if(b.dataset.act==='drop-tap'&&!ui.selectedPerson){actHandled(ev);const dest=destinationFrom(b),p=plan(getRoute()[1]);if(!edit('plans')||lockedPlan(p.id)||event(p.eventId).cancelled)return;modal(dest.kind==='driver'?'運転者を選ぶ':'同乗者を選ぶ',participants(p.eventId).map(m=>action('assign-choice',esc(m.name),`data-mid="${esc(m.id)}" data-kind="${dest.kind}" data-car-id="${esc(dest.carId)}"`,'row')).join(''));}
 },true);
 // Keep both horizontal positions through selection, movement and asynchronous saves.
+function opFitNames(){if(getRoute()[0]!=='car')return;document.querySelectorAll('.op-car-editor .person-name').forEach(el=>{if(!el.matches?.('.person-name'))return;el.style.fontSize='';const width=el.clientWidth;if(!width)return;let size=parseFloat(getComputedStyle(el).fontSize);for(let i=0;i<3&&el.scrollWidth>width;i++){size=Math.max(1,size*width/el.scrollWidth-.2);el.style.fontSize=size+'px';}});}
+window.addEventListener('resize',opFitNames);
+if(document.fonts?.ready)document.fonts.ready.then(opFitNames);
 const opScrollRender=render;let opScrollRoute='';
-render=function(){const key=state?.group?.id+'|'+getRoute().join('/'),positions={};if(key===opScrollRoute)document.querySelectorAll('[data-car-scroll]').forEach(el=>positions[el.dataset.carScroll]=el.scrollLeft);opScrollRender();document.querySelectorAll('[data-car-scroll]').forEach(el=>{el.scrollLeft=positions[el.dataset.carScroll]||0;});opScrollRoute=key;};
+render=function(){const key=state?.group?.id+'|'+getRoute().join('/'),positions={};if(key===opScrollRoute)document.querySelectorAll('[data-car-scroll]').forEach(el=>positions[el.dataset.carScroll]=el.scrollLeft);opScrollRender();document.querySelectorAll('[data-car-scroll]').forEach(el=>{el.scrollLeft=positions[el.dataset.carScroll]||0;});opScrollRoute=key;opFitNames();};
 
 // Listing is derived from club dates; opening the list never creates a plan.
 function opCarMonths(){const months=new Map(),current=DEMO_TODAY.slice(0,7);months.set(current,[]);for(const e of clubEvents()){const key=e.date.slice(0,7);if(!months.has(key))months.set(key,[]);months.get(key).push(e);}return [...months].sort(([a],[b])=>a.localeCompare(b));}

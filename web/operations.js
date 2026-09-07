@@ -84,8 +84,11 @@ window.addEventListener('click',ev=>{
  if(b.dataset.act==='drop-tap'&&!ui.selectedPerson){actHandled(ev);const dest=destinationFrom(b),p=plan(getRoute()[1]);if(!edit('plans')||lockedPlan(p.id)||event(p.eventId).cancelled)return;modal(dest.kind==='driver'?'運転者を選ぶ':'同乗者を選ぶ',participants(p.eventId).map(m=>action('assign-choice',esc(m.name),`data-mid="${esc(m.id)}" data-kind="${dest.kind}" data-car-id="${esc(dest.carId)}"`,'row')).join(''));}
 },true);
 // Keep both horizontal positions through selection, movement and asynchronous saves.
+function opFitNames(){if(getRoute()[0]!=='car')return;document.querySelectorAll('.op-car-editor .person-name').forEach(el=>{if(!el.matches?.('.person-name'))return;el.style.fontSize='';const width=el.clientWidth;if(!width)return;let size=parseFloat(getComputedStyle(el).fontSize);for(let i=0;i<3&&el.scrollWidth>width;i++){size=Math.max(1,size*width/el.scrollWidth-.2);el.style.fontSize=size+'px';}});}
+window.addEventListener('resize',opFitNames);
+if(document.fonts?.ready)document.fonts.ready.then(opFitNames);
 const opScrollRender=render;let opScrollRoute='';
-render=function(){const key=state?.group?.id+'|'+getRoute().join('/'),positions={};if(key===opScrollRoute)document.querySelectorAll('[data-car-scroll]').forEach(el=>positions[el.dataset.carScroll]=el.scrollLeft);opScrollRender();document.querySelectorAll('[data-car-scroll]').forEach(el=>{el.scrollLeft=positions[el.dataset.carScroll]||0;});opScrollRoute=key;};
+render=function(){const key=state?.group?.id+'|'+getRoute().join('/'),positions={};if(key===opScrollRoute)document.querySelectorAll('[data-car-scroll]').forEach(el=>positions[el.dataset.carScroll]=el.scrollLeft);opScrollRender();document.querySelectorAll('[data-car-scroll]').forEach(el=>{el.scrollLeft=positions[el.dataset.carScroll]||0;});opScrollRoute=key;opFitNames();};
 
 // Listing is derived from club dates; opening the list never creates a plan.
 function opCarMonths(){const months=new Map(),current=DEMO_TODAY.slice(0,7);months.set(current,[]);for(const e of clubEvents()){const key=e.date.slice(0,7);if(!months.has(key))months.set(key,[]);months.get(key).push(e);}return [...months].sort(([a],[b])=>a.localeCompare(b));}
