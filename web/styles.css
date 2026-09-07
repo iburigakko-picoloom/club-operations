@@ -294,3 +294,5 @@ body[data-screen="car"] .app{max-width:1100px}
 .cal-day .cal-event{-webkit-line-clamp:1;display:block;white-space:nowrap;text-overflow:ellipsis;line-height:1.35}.cal-day{gap:3px}.cal-day .cal-venue{-webkit-line-clamp:1}
 
 .cal-grid{touch-action:pan-y}.cal-day{gap:2px;padding-top:3px;padding-bottom:4px}.cal-day .cal-event{font-size:10px;line-height:1.2;font-weight:500}.cal-day .cal-number{min-height:20px;height:20px;min-width:22px;font-size:12px}.cal-day .cal-venue,.cal-day .cal-more{font-size:9px;line-height:1.2}
+
+.cal-surface{overflow-x:clip}
