@@ -286,3 +286,5 @@ body[data-screen="car"] .app{max-width:1100px}
 .op-car-month{border-bottom:1px solid var(--line)}.op-car-month summary{padding:17px 2px;font-size:17px;font-weight:600;cursor:pointer}.op-car-month[open] summary{color:var(--green)}.op-car-date-name{display:block}.op-date-status{font-size:12px;color:var(--green);white-space:nowrap}
 
 .op-empty-driver{display:flex;align-items:center;justify-content:center;width:calc(100% - 8px);min-height:44px;margin:4px;border:1px dashed #9cb7a4;border-radius:4px;background:#fff;color:#42634d;font-size:15px}.op-empty-driver.drop-over{border-style:solid}
+
+.op-people-group.op-optional-end{border-left:1px solid #c8dfce;padding-left:12px}.op-people-group.op-optional-end>span:first-child{color:#376e49}
