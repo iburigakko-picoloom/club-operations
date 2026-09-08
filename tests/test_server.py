@@ -239,3 +239,20 @@ def test_executive_and_gym_permissions(env):
  events=copy.deepcopy(s['events']);events[1]['title']='権限外';assert patch(env,b,s,{'events':events}).status_code==403
  events=copy.deepcopy(s['events']);events[0]['done']=True;assert patch(env,b,s,{'events':events}).status_code==403
  assert patch(env,b,s,{'venueAssignments':{'e':{'venueId':'v'}}}).status_code==403
+
+def test_court_assignment_roundtrip_and_validation(env):
+ c=env;u=account(c);s=populate(c,u,create(c,u));ids=['m1','m2','m3']
+ courts={'ranking':['m0']+ids,'sessions':{'e':{'source':{'participants':ids,'ranking':ids,'courts':4,'venueId':'v'},'level':[ids], 'balanced':[ids]}}}
+ original=copy.deepcopy(s)
+ response=patch(c,u,s,{'courtAssignments':courts});assert response.status_code==200,response.text
+ s=response.json();loaded=get(c,s['group']['id']);assert loaded['courtAssignments']==courts
+ assert loaded['training']==original['training'];assert loaded['events']==original['events'];assert loaded['attendance']==original['attendance']
+ bad=copy.deepcopy(courts);bad['sessions']['e']['balanced']=[['m1','m1','m3']]
+ assert patch(c,u,s,{'courtAssignments':bad}).status_code==400
+ bad=copy.deepcopy(courts);bad['sessions']['e']['source']['courts']=2
+ assert patch(c,u,s,{'courtAssignments':bad}).status_code==409
+ bad=copy.deepcopy(courts);bad['ranking'].append('unknown')
+ assert patch(c,u,s,{'courtAssignments':bad}).status_code==400
+ # An attendance edit keeps the old snapshot; rebuilding must use the new attendance.
+ attendance={**s['attendance'],'e|m1':False};response=patch(c,u,s,{'attendance':attendance});assert response.status_code==200,response.text
+ assert response.json()['courtAssignments']==courts

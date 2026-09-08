@@ -309,6 +309,8 @@ body[data-screen="car"] .app{max-width:1100px}
 .cal-footer>.text-btn:last-child{flex:1;background:var(--green-soft);border-color:#cfdfd2}
 .cal-footer>.cal-selection{position:static;transform:none;width:100%;margin:0;border-radius:6px;box-shadow:none;padding:8px 10px}
 @media(max-height:650px){.cal-footer{height:104px;min-height:104px;padding:8px 0}}
+
+.court-toolbar,.court-context{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}.court-context{font-size:14px}.court-board{display:flex;gap:10px;overflow-x:auto;padding:4px 0 12px;touch-action:pan-x pan-y}.court-column{flex:0 0 130px;border:1px solid var(--line);border-radius:5px;overflow:hidden}.court-column h3{font-size:14px;padding:12px;background:var(--green-soft);display:flex;justify-content:space-between}.court-column h3 small{font-weight:400}.court-name{padding:12px 8px;border-top:1px solid var(--line);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.court-ranking .row{min-height:52px;padding:5px 0;gap:6px}.court-ranking select{width:70px;padding:6px;min-height:38px;font-size:14px}.court-ranking .icon-btn{width:30px;min-height:40px}.court-rank-no{font-size:12px;color:var(--muted);width:22px}.court-ranking .row-main{font-size:14px}
 </style></head><body><div class="app" id="app"></div><div id="modal-root"></div><div id="toast-root" aria-live="polite"></div><script>'use strict';
 const clubSessionKey='club-operations-session-v1';
 const clubFlowKey='club-operations-line-flow-v1';
@@ -569,8 +571,8 @@ window.addEventListener('hashchange',()=>{ui.selectedPerson=null;closeModal();wi
    original menu time semantics are preserved in domain.js, rather than an iframe. */
 'use strict';
 const D=ClubDomain;
-const MODULE_KEYS=['group','people','events','tasks','notices','plans','venues','venueAssignments','equipment','attendance','training','settlements','settings','roles'];
-const MODULE_ROLES={events:'予定',tasks:'やること',notices:'お知らせ',plans:'配車',settlements:'配車',attendance:'出欠',people:'部員',venues:'体育館',venueAssignments:'体育館',training:'練習メニュー',equipment:'備品'};
+const MODULE_KEYS=['group','people','events','tasks','notices','plans','venues','venueAssignments','courtAssignments','equipment','attendance','training','settlements','settings','roles'];
+const MODULE_ROLES={events:'予定',tasks:'やること',notices:'お知らせ',plans:'配車',settlements:'配車',attendance:'出欠',people:'部員',venues:'体育館',venueAssignments:'体育館',courtAssignments:'コート割',training:'練習メニュー',equipment:'備品'};
 const LEGACY_DEFAULT={categories:[{id:'cat_basic',name:'基礎'},{id:'cat_knock',name:'ノック'},{id:'cat_footwork',name:'フットワーク'},{id:'cat_game',name:'ゲーム'},{id:'cat_core',name:'体幹'},{id:'cat_other',name:'その他'}],menus:[{id:'menu_1',name:'基礎打ち',categoryId:'cat_basic',seconds:300,requiresSets:true},{id:'menu_2',name:'スマッシュノック',categoryId:'cat_knock',seconds:120,requiresSets:true},{id:'menu_3',name:'フットワーク',categoryId:'cat_footwork',seconds:180,requiresSets:true},{id:'menu_4',name:'ゲーム練習',categoryId:'cat_game',seconds:480,requiresSets:true},{id:'menu_5',name:'体幹トレーニング',categoryId:'cat_core',seconds:600,requiresSets:false},{id:'menu_6',name:'休憩',categoryId:'cat_other',seconds:300,requiresSets:false}]};
 const ctx={mode:'loading',ready:false,user:null,csrf:'',groups:[],base:null,busy:false,conflict:null,pushConfig:{},authTab:'login'};
 let practiceDraft=null,practiceCategory='all',practiceEvent='',previewCanvas=null,previewPracticeSource=null,practiceReorder=false,practiceCategoryEdit=false,practiceHistoryEdit=false,previewPracticeHistorySaved=false,menuDrag=null,categoryDrag=null;
@@ -1402,5 +1404,90 @@ render=function(){const key=state?.group?.id+'|'+getRoute().join('/'),positions=
 function opCarMonths(){const months=new Map(),current=DEMO_TODAY.slice(0,7);months.set(current,[]);for(const e of clubEvents()){const key=e.date.slice(0,7);if(!months.has(key))months.set(key,[]);months.get(key).push(e);}return [...months].sort(([a],[b])=>a.localeCompare(b));}
 renderCarpools=function(){return shell('配車','operations',opCarMonths().map(([month,events])=>`<details class="op-car-month" ${month===DEMO_TODAY.slice(0,7)?'open':''}><summary>${Number(month.slice(0,4))}年${Number(month.slice(5))}月</summary>${events.map(e=>{const p=state.plans.find(p=>p.eventId===e.id),gym=eventVenue(e)?.name;const body=`<span class="row-main"><span class="row-title">${jpDate(e.date)}${e.endDate>e.date?'〜'+jpDate(e.endDate):''}</span><span class="row-sub op-car-date-name">${esc(e.title)}${gym?' · '+esc(gym):''}</span></span><span class="op-date-status">${p?(p.status==='draft'?'下書き':'作成済み'):'作成'}</span>${icon('chev','chev')}`;return p?`<a class="row" href="#car/${esc(p.id)}">${body}</a>`:`<button class="row" data-act="car-create" data-id="${esc(e.id)}" ${edit('plans')?'':'disabled'}>${body}</button>`;}).join('')||'<p class="empty">部活予定はありません</p>'}</details>`).join('')+`<hr class="rule">${entry('月次精算','settlement','paper')}`,'operations');};
 
+if(ctx.ready)render();
+</script><script>(function(root){
+'use strict';
+function sizes(n,courts){
+ if(!Number.isInteger(n)||n<0||!Number.isInteger(courts)||courts<1||courts>30)throw Error('参加人数と体育館のコート数を確認してください');
+ if(!n)return [];
+ const count=Math.min(courts,Math.max(1,Math.floor(n/4),Math.ceil(n/5))),base=Math.floor(n/count),extra=n%count;
+ return Array.from({length:count},(_,i)=>base+(i<extra?1:0));
+}
+function shuffle(a,rng){for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function meanSpread(groups,rank){const means=groups.map(g=>g.reduce((a,id)=>a+rank.get(id),0)/g.length);return Math.max(...means)-Math.min(...means);}
+function create(ids,courts,rng=Math.random){
+ if(new Set(ids).size!==ids.length)throw Error('参加者が重複しています');
+ const capacities=sizes(ids.length,courts),level=[];let offset=0;
+ for(const n of capacities){level.push(ids.slice(offset,offset+n));offset+=n;}
+ if(!ids.length)return {level:[],balanced:[]};
+ const rank=new Map(ids.map((id,i)=>[id,i+1]));let best=null,bestScore=Infinity;
+ // Each band contributes at most one person per court; compare many random deals.
+ for(let trial=0;trial<300;trial++){
+  const groups=capacities.map(()=>[]);let cursor=0;
+  for(let row=0;cursor<ids.length;row++){
+   const targets=shuffle(capacities.map((n,i)=>n>row?i:-1).filter(i=>i>=0),rng);
+   for(const i of targets)groups[i].push(ids[cursor++]);
+  }
+  const score=meanSpread(groups,rank);
+  if(score<bestScore||score===bestScore&&rng()<.5){best=groups;bestScore=score;}
+ }
+ // Court labels should not permanently favor one group size or level band.
+ return {level,balanced:shuffle(best,rng).map(g=>g.sort((a,b)=>rank.get(a)-rank.get(b)))};
+}
+const api={sizes,create,meanSpread};root.CourtDomain=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
+})(typeof globalThis!=='undefined'?globalThis:this);
+</script><script>'use strict';
+const courtUI={eventId:'',mode:'level',groupId:'',rank:null};
+function courtData(){return state.courtAssignments||{ranking:[],sessions:{}};}
+function courtParticipants(eid){const ids=new Set(participants(eid).map(p=>p.id));return courtData().ranking.filter(id=>ids.has(id));}
+function courtSnapshot(eid){return {participants:participants(eid).map(p=>p.id).sort(),ranking:courtParticipants(eid),courts:eventVenue(event(eid))?.courts||0,venueId:eventVenue(event(eid))?.id||''};}
+function courtStale(saved,eid){return JSON.stringify(saved.source)!==JSON.stringify(courtSnapshot(eid));}
+function renderCourts(){
+ if(courtUI.groupId!==state.group.id){courtUI.groupId=state.group.id;courtUI.eventId='';courtUI.rank=null;}
+ const days=clubEvents().filter(e=>!e.cancelled),upcoming=days.find(e=>(e.endDate||e.date)>=DEMO_TODAY);
+ if(!days.some(e=>e.id===courtUI.eventId))courtUI.eventId=(upcoming||days[days.length-1])?.id||'';
+ const e=event(courtUI.eventId),gym=e&&eventVenue(e),count=e?participants(e.id).length:0,ranked=e?courtParticipants(e.id):[],saved=courtData().sessions[e?.id],ready=e&&gym?.courts&&count&&ranked.length===count,ro=!edit('courtAssignments');
+ let html=`<div class="court-toolbar"><a class="text-btn" href="#court-ranking">レベル順を設定</a></div>`;
+ if(!e)return shell('コート割','operations',html+'<p class="empty">部活予定を登録してください</p>','operations');
+ html+=`<label class="field"><span class="label">日程</span><select data-court-date>${days.map(d=>`<option value="${esc(d.id)}" ${d.id===e.id?'selected':''}>${jpDate(d.date,true)}　${esc(d.title)}</option>`).join('')}</select></label><div class="court-context"><span>${esc(gym?.name||'体育館の割当が必要です')}${gym?' · '+gym.courts+'面':''}</span><a class="text-btn" href="#attendance">参加 ${count}人</a></div>`;
+ if(!gym)html+='<a class="row" href="#venues">体育館を割り当てる</a>';
+ if(count&&ranked.length!==count)html+='<a class="row" href="#court-ranking">参加者のレベル順を確認してください</a>';
+ if(saved&&courtStale(saved,e.id))html+='<p class="warning">出欠・体育館・レベル順が変わっています。再作成してください。</p>';
+ html+=segments([['level','レベル順'],['balanced','均等']],courtUI.mode,'court-mode');
+ if(saved){const groups=saved[courtUI.mode]||[];html+=`<div class="court-board">${groups.map((members,i)=>`<section class="court-column"><h3>コート${i+1}<small>${members.length}人</small></h3>${members.map(id=>`<div class="court-name">${esc(pName(id))}</div>`).join('')}</section>`).join('')}</div>`;}else html+='<p class="empty">日程を選んで作成</p>';
+ if(!ro)html+=`<div class="form-actions">${action('court-create',saved?'再作成':'コート割を作成',ready?'':'disabled','primary full')}${saved&&courtUI.mode==='balanced'?action('court-shuffle','再抽選',ready&&!courtStale(saved,e.id)?'':'disabled','secondary'):''}</div>`;
+ return shell('コート割','operations',html,'operations');
+}
+function renderCourtRanking(){
+ if(courtUI.groupId!==state.group.id){courtUI.groupId=state.group.id;courtUI.rank=null;}
+ const members=state.people.filter(p=>p.active!==false),ids=new Set(members.map(p=>p.id));
+ if(!courtUI.rank)courtUI.rank=[...courtData().ranking.filter(id=>ids.has(id)),...members.filter(p=>!courtData().ranking.includes(p.id)).map(p=>p.id)];
+ const ro=!edit('courtAssignments');
+ return shell('レベル順','courts',`<p class="note">上ほどレベルが高い順。順位を変えて移動できます。</p><div class="court-ranking">${courtUI.rank.map((id,i)=>`<div class="row"><span class="court-rank-no">${i+1}</span><span class="row-main">${esc(pName(id))}</span><select data-court-rank="${esc(id)}" aria-label="${esc(pName(id))}の順位" ${ro?'disabled':''}>${courtUI.rank.map((_,j)=>`<option value="${j}" ${i===j?'selected':''}>${j+1}位</option>`).join('')}</select>${action('court-up','↑',`data-id="${esc(id)}" aria-label="${esc(pName(id))}を上へ" ${ro||i===0?'disabled':''}`,'icon-btn')}${action('court-down','↓',`data-id="${esc(id)}" aria-label="${esc(pName(id))}を下へ" ${ro||i===courtUI.rank.length-1?'disabled':''}`,'icon-btn')}</div>`).join('')||'<p class="empty">部員を登録してください</p>'}</div>`,'courts',ro?'':action('court-rank-save','保存','','text-btn'));
+}
+function courtMove(id,index){const i=courtUI.rank?.indexOf(id);if(i===undefined||i<0)return;courtUI.rank.splice(i,1);courtUI.rank.splice(Math.max(0,Math.min(index,courtUI.rank.length)),0,id);const y=window.scrollY;render();window.scrollTo(0,y);}
+window.addEventListener('change',ev=>{if(ev.target.matches('[data-court-date]')){courtUI.eventId=ev.target.value;render();}if(ev.target.matches('[data-court-rank]')&&edit('courtAssignments')&&!ctx.busy)courtMove(ev.target.dataset.courtRank,Number(ev.target.value));});
+window.addEventListener('click',async ev=>{
+ const b=ev.target.closest('[data-act^="court-"]');if(!b||b.disabled)return;actHandled(ev);const d=b.dataset;
+ if(d.act==='court-mode'){courtUI.mode=d.value;render();return;}
+ try{
+  if(ctx.busy||!edit('courtAssignments'))throw Error('コート割の編集権限を確認してください');
+  if(d.act==='court-up'||d.act==='court-down'){courtMove(d.id,courtUI.rank.indexOf(d.id)+(d.act==='court-up'?-1:1));return;}
+  if(d.act==='court-rank-save'){const rank=[...courtUI.rank];await wfSave(()=>{state.courtAssignments||={ranking:[],sessions:{}};state.courtAssignments.ranking=rank;});courtUI.rank=null;go('courts');return;}
+  if(d.act==='court-create'||d.act==='court-shuffle'){
+   const e=event(courtUI.eventId),gym=e&&eventVenue(e),ranked=e?courtParticipants(e.id):[];
+   if(!e||e.cancelled||!gym?.courts||!ranked.length||ranked.length!==participants(e.id).length)throw Error('日程・体育館・参加者のレベル順を確認してください');
+   const data=CourtDomain.create(ranked,gym.courts),source=courtSnapshot(e.id);
+   if(d.act==='court-shuffle'&&(!courtData().sessions[e.id]||courtStale(courtData().sessions[e.id],e.id)))throw Error('先に再作成してください');
+   await wfSave(()=>{state.courtAssignments||={ranking:[],sessions:{}};const old=state.courtAssignments.sessions[e.id];state.courtAssignments.sessions[e.id]={source,level:d.act==='court-shuffle'?old.level:data.level,balanced:data.balanced,updatedAt:new Date().toISOString()};});toast('保存しました');
+  }
+ }catch(error){toast(error.message);}
+},true);
+const courtPreviousOperations=renderOperations;
+renderOperations=function(){return courtPreviousOperations().replace(entry('体育館','venues','calendar'),entry('体育館','venues','calendar')+entry('コート割','courts','people'));};
+// Enter through the existing route/auth guard; never render a group before login.
+const courtPreviousRoute=wfRenderRoute;
+wfRenderRoute=function(r,id,extra){const guarded=courtPreviousRoute(r,id,extra);if(guarded!==null)return guarded;if(r==='courts')return renderCourts();if(r==='court-ranking')return renderCourtRanking();return null;};
+window.addEventListener('hashchange',()=>{if(getRoute()[0]!=='court-ranking')courtUI.rank=null;});
 if(ctx.ready)render();
 </script></body></html>

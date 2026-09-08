@@ -17,7 +17,7 @@ ROOT=Path(__file__).resolve().parents[1]
 DB_PATH=Path(os.environ.get('CLUB_DB', str(ROOT/'data'/'club.sqlite3')))
 JST=ZoneInfo('Asia/Tokyo')
 COOKIE='club_session'
-MODULES={'events':'予定','tasks':'やること','notices':'お知らせ','people':'部員','attendance':'出欠','plans':'配車','settlements':'配車','venues':'体育館','venueAssignments':'体育館','training':'練習メニュー','equipment':'備品','settings':'設定','roles':'権限','group':'グループ'}
+MODULES={'events':'予定','tasks':'やること','notices':'お知らせ','people':'部員','attendance':'出欠','plans':'配車','settlements':'配車','venues':'体育館','venueAssignments':'体育館','courtAssignments':'コート割','training':'練習メニュー','equipment':'備品','settings':'設定','roles':'権限','group':'グループ'}
 ARRAYS=['people','events','tasks','notices','plans','venues','equipment','settlements']
 AUTH_ATTEMPTS={}
 
@@ -154,6 +154,24 @@ def validate(s,operators):
     if not isinstance(s.get('venueAssignments',{}),dict):fail('体育館割当を確認してください')
     for eid,a in s.get('venueAssignments',{}).items():
         if es.get(eid,{}).get('kind')!='club' or not isinstance(a,dict) or a.get('venueId') not in vs:fail('体育館割当を確認してください')
+    if 'courtAssignments' in s:
+        data=s['courtAssignments']
+        if not isinstance(data,dict) or not isinstance(data.get('sessions'),dict):fail('コート割を確認してください')
+        def court_members(ids):
+            if not isinstance(ids,list) or any(not isinstance(mid,str) or mid not in ps for mid in ids) or len(set(ids))!=len(ids):fail('コート割の部員を確認してください')
+        court_members(data.get('ranking'))
+        for eid,session in data['sessions'].items():
+            if es.get(eid,{}).get('kind')!='club' or not isinstance(session,dict):fail('コート割の日程を確認してください')
+            source=session.get('source')
+            if not isinstance(source,dict):fail('コート割の元データを確認してください')
+            court_members(source.get('participants'));court_members(source.get('ranking'));number(source.get('courts'),1,30);text(source.get('venueId'),100)
+            if sorted(source['participants'])!=sorted(source['ranking']):fail('レベル順の対象を確認してください')
+            for key in ['level','balanced']:
+                groups=session.get(key)
+                if not isinstance(groups,list) or not groups or len(groups)>source['courts'] or any(not isinstance(g,list) or not g for g in groups):fail('コート数を確認してください')
+                ids=[mid for g in groups for mid in g];court_members(ids)
+                if sorted(ids)!=sorted(source['participants']):fail('コート割の参加者が一致しません')
+                if max(map(len,groups))-min(map(len,groups))>1:fail('コートの人数差を確認してください')
     for t in s['tasks']:
         text(t.get('title'),200,True)
         if not isdate(t.get('date')):fail('期限を確認してください')
@@ -361,6 +379,15 @@ async def update_state(gid:str,req:Request):
             s[key]=value
         operators={r['user_id'] for r in c.execute('SELECT user_id FROM memberships WHERE group_id=?',(gid,))}
         seed_attendance(s);validate(s,operators)
+        if 'courtAssignments' in changes:
+            for eid,session in s['courtAssignments']['sessions'].items():
+                if session==old.get('courtAssignments',{}).get('sessions',{}).get(eid):continue
+                e=next(e for e in s['events'] if e['id']==eid)
+                vid=s.get('venueAssignments',{}).get(eid,{}).get('venueId',e.get('venueId'))
+                gym=next((v for v in s['venues'] if v['id']==vid),None)
+                ids=sorted(p['id'] for p in s['people'] if p.get('active') and s['attendance'].get(eid+'|'+p['id'],p.get('defaultOverride') if p.get('defaultOverride') is not None else p['seniority']=='below'))
+                source=session['source']
+                if e.get('cancelled') or not gym or gym['id']!=source['venueId'] or gym['courts']!=source['courts'] or ids!=sorted(source['participants']) or [mid for mid in s['courtAssignments']['ranking'] if mid in ids]!=source['ranking']:fail('出欠・体育館・レベル順を再確認してください',409)
         # Membership / group identifiers and finalized statements never come from a client.
         if s['group']['id']!=gid:fail('グループが一致しません',403)
         # Finalized snapshots cannot be edited in place; only locked true -> false.

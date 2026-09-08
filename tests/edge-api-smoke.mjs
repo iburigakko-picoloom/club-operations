@@ -60,6 +60,17 @@ try{
  s=await patch(b,loaded,{events:completed});loaded=await call(endpoint,'GET',undefined,a);assert.equal(loaded.events[1].completedBy,b.user.id);assert.deepEqual(loaded.events[1].notifications,reminders);assert.equal(loaded.tasks.length,0);assert.equal(loaded.events.length,3);
  completed[1].title='unauthorized';await patch(b,loaded,{events:completed},403);
  s=loaded;
+ // Court ranking and both variants round-trip through the same authorized state API.
+ const courtPeople=Array.from({length:9},(_,i)=>({id:'cm'+i,name:'コート部員'+i,grade:2,seniority:'below',pickup:'university',active:true,defaultOverride:null}));
+ s=await patch(a,s,{people:courtPeople});
+ const ranking=courtPeople.map(p=>p.id),source={participants:[...ranking].sort(),ranking,courts:2,venueId:'v2'};
+ const courts={ranking,sessions:{club:{source,level:[ranking.slice(0,5),ranking.slice(5)],balanced:[[ranking[0],ranking[3],ranking[4],ranking[7],ranking[8]],[ranking[1],ranking[2],ranking[5],ranking[6]]],updatedAt:new Date().toISOString()}}};
+ await patch(b,s,{courtAssignments:courts},403);
+ s=await patch(a,s,{courtAssignments:courts});const courtReload=await call(endpoint,'GET',undefined,a);assert.deepEqual(courtReload.courtAssignments,courts);assert.deepEqual(courtReload.training,training);assert.deepEqual(courtReload.events,s.events);
+ const duplicates=structuredClone(courts);duplicates.sessions.club.balanced[0][0]='cm1';await patch(a,s,{courtAssignments:duplicates},400);
+ s=await patch(a,s,{roles:{...s.roles,'コート割':[b.user.id]}});
+ const reordered=structuredClone(courts);reordered.ranking.reverse();s=await patch(b,s,{courtAssignments:reordered});assert.deepEqual(s.courtAssignments.ranking,reordered.ranking);
+ const stale=structuredClone(courts);stale.sessions.club.source.courts=3;await patch(b,s,{courtAssignments:stale},409);
  const inv2=await call('/groups/'+gid+'/invite','POST',{},a);const list=await call('/groups/'+gid+'/invites','GET',undefined,a);const active=list.invites.find(i=>i.status==='active');assert.ok(active);await call('/groups/'+gid+'/invites/'+active.id+'/revoke','POST',{},a);await call('/invites/'+inv2.token,'GET',undefined,undefined,400);
  await call('/account','PATCH',{name:'変更した名前'},b);assert.equal((await call('/session','GET',undefined,b)).user.name,'変更した名前');
  await call('/groups/'+gid+'/membership','POST',{userId:b.user.id,action:'remove'},a);await call(endpoint,'GET',undefined,b,403);

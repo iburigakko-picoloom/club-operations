@@ -2,8 +2,8 @@
    original menu time semantics are preserved in domain.js, rather than an iframe. */
 'use strict';
 const D=ClubDomain;
-const MODULE_KEYS=['group','people','events','tasks','notices','plans','venues','venueAssignments','equipment','attendance','training','settlements','settings','roles'];
-const MODULE_ROLES={events:'予定',tasks:'やること',notices:'お知らせ',plans:'配車',settlements:'配車',attendance:'出欠',people:'部員',venues:'体育館',venueAssignments:'体育館',training:'練習メニュー',equipment:'備品'};
+const MODULE_KEYS=['group','people','events','tasks','notices','plans','venues','venueAssignments','courtAssignments','equipment','attendance','training','settlements','settings','roles'];
+const MODULE_ROLES={events:'予定',tasks:'やること',notices:'お知らせ',plans:'配車',settlements:'配車',attendance:'出欠',people:'部員',venues:'体育館',venueAssignments:'体育館',courtAssignments:'コート割',training:'練習メニュー',equipment:'備品'};
 const LEGACY_DEFAULT={categories:[{id:'cat_basic',name:'基礎'},{id:'cat_knock',name:'ノック'},{id:'cat_footwork',name:'フットワーク'},{id:'cat_game',name:'ゲーム'},{id:'cat_core',name:'体幹'},{id:'cat_other',name:'その他'}],menus:[{id:'menu_1',name:'基礎打ち',categoryId:'cat_basic',seconds:300,requiresSets:true},{id:'menu_2',name:'スマッシュノック',categoryId:'cat_knock',seconds:120,requiresSets:true},{id:'menu_3',name:'フットワーク',categoryId:'cat_footwork',seconds:180,requiresSets:true},{id:'menu_4',name:'ゲーム練習',categoryId:'cat_game',seconds:480,requiresSets:true},{id:'menu_5',name:'体幹トレーニング',categoryId:'cat_core',seconds:600,requiresSets:false},{id:'menu_6',name:'休憩',categoryId:'cat_other',seconds:300,requiresSets:false}]};
 const ctx={mode:'loading',ready:false,user:null,csrf:'',groups:[],base:null,busy:false,conflict:null,pushConfig:{},authTab:'login'};
 let practiceDraft=null,practiceCategory='all',practiceEvent='',previewCanvas=null,previewPracticeSource=null,practiceReorder=false,practiceCategoryEdit=false,practiceHistoryEdit=false,previewPracticeHistorySaved=false,menuDrag=null,categoryDrag=null;

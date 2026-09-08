@@ -1,7 +1,7 @@
 // Shared-state rules. Keep authorization and settlement history checks on the server.
 export class HttpError extends Error { constructor(detail, status=400){super(detail);this.status=status;} }
 export function fail(message,status=400){throw new HttpError(message,status);}
-export const MODULES={events:'予定',tasks:'やること',notices:'お知らせ',people:'部員',attendance:'出欠',plans:'配車',settlements:'配車',venues:'体育館',venueAssignments:'体育館',training:'練習メニュー',equipment:'備品',settings:'設定',roles:'権限',group:'グループ'};
+export const MODULES={events:'予定',tasks:'やること',notices:'お知らせ',people:'部員',attendance:'出欠',plans:'配車',settlements:'配車',venues:'体育館',venueAssignments:'体育館',courtAssignments:'コート割',training:'練習メニュー',equipment:'備品',settings:'設定',roles:'権限',group:'グループ'};
 const ARRAYS=['people','events','tasks','notices','plans','venues','equipment','settlements'];
 export const object=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 export function text(x,limit=2000,required=false){if(typeof x!=='string'||x.length>limit||(required&&!x.trim()))fail('文字の入力を確認してください');}
@@ -28,6 +28,12 @@ export function validate(s,operators){
  for(const p of s.people){text(p.name,80,true);text(p.memo??'');number(p.grade,1,6);if(!['above','below'].includes(p.seniority)||!['university','station'].includes(p.pickup))fail('部員の区分を確認してください');if(p.defaultOverride!=null&&typeof p.defaultOverride!=='boolean')fail('参加設定を確認してください');}
  for(const e of s.events){if(e.done!==undefined&&typeof e.done!=='boolean')fail('完了状態を確認してください');text(e.title,200,true);if(!['club','executive'].includes(e.kind)||!isdate(e.date))fail('予定の日時を確認してください');const end=e.endDate||e.date;if(!isdate(end)||end<e.date)fail('終了日を確認してください');for(const k of ['start','end'])if(e[k]&&!istime(e[k]))fail('時刻を確認してください');if(end===e.date&&e.start&&e.end&&e.end<e.start)fail('終了時刻を確認してください');if(e.venueId&&!vs.has(e.venueId))fail('体育館が見つかりません');assignees(e.assignees);if(e.courts!=null)number(e.courts,1,30);}
  for(const [eid,a] of Object.entries(dict(s.venueAssignments===undefined?{}:s.venueAssignments))){if(es.get(eid)?.kind!=='club'||!object(a)||!vs.has(a.venueId))fail('体育館割当を確認してください');}
+ if(s.courtAssignments!==undefined){
+  const data=dict(s.courtAssignments),ranking=array(data.ranking);const members=ids=>{array(ids);if(new Set(ids).size!==ids.length||ids.some(id=>!ps.has(id)))fail('コート割の部員を確認してください');};members(ranking);
+  for(const [eid,session] of Object.entries(dict(data.sessions))){if(es.get(eid)?.kind!=='club')fail('コート割の日程を確認してください');dict(session);const source=dict(session.source);members(source.participants);members(source.ranking);number(source.courts,1,30);text(source.venueId,100);if(!equal([...source.participants].sort(),[...source.ranking].sort()))fail('レベル順の対象を確認してください');
+   for(const key of ['level','balanced']){const groups=array(session[key],30);if(!groups.length||groups.length>source.courts)fail('コート数を確認してください');for(const g of groups){array(g);if(!g.length)fail('空のコートがあります');}const ids=groups.flat();members(ids);if(!equal([...ids].sort(),[...source.participants].sort()))fail('コート割の参加者が一致しません');const sizes=groups.map(g=>g.length);if(Math.max(...sizes)-Math.min(...sizes)>1)fail('コートの人数差を確認してください');}
+  }
+ }
  for(const t of s.tasks){text(t.title,200,true);if(!isdate(t.date)||!istime(t.time))fail('期限日時を確認してください');assignees(t.assignees);if(t.relatedEventId&&!es.has(t.relatedEventId))fail('関連予定を確認してください');}
  for(const n of s.notices){text(n.title,200,true);text(n.body,20000,true);assignees(n.assignees);if(n.targetRoles)array(n.targetRoles);}
  for(const [k,v] of Object.entries(s.attendance)){const [eid,mid,...extra]=k.split('|');if(extra.length||!es.has(eid)||!ps.has(mid)||typeof v!=='boolean')fail('出欠の対象を確認してください');}
@@ -64,6 +70,12 @@ export function updateState(old,changes,user,owner,gid,operators){
  }
  // Validate the shape before seeding; malformed client data must not cause an internal error.
  validate(s,operators);seedAttendance(s);if(s.group.id!==gid)fail('グループが一致しません',403);
+ if(Object.hasOwn(changes,'courtAssignments'))for(const [eid,session] of Object.entries(s.courtAssignments.sessions)){
+  if(equal(session,old.courtAssignments?.sessions?.[eid]))continue;
+  const e=s.events.find(e=>e.id===eid),gym=s.venues.find(v=>v.id===(s.venueAssignments?.[eid]?.venueId??e?.venueId));
+  const ids=s.people.filter(p=>p.active&&(s.attendance[eid+'|'+p.id]??p.defaultOverride??p.seniority==='below')).map(p=>p.id).sort();
+  if(e.cancelled||!gym||gym.id!==session.source.venueId||gym.courts!==session.source.courts||!equal(ids,[...session.source.participants].sort())||!equal(s.courtAssignments.ranking.filter(id=>ids.includes(id)),session.source.ranking))fail('出欠・体育館・レベル順を再確認してください',409);
+ }
  const snapshots=new Map(s.settlements.map(x=>[x.id,x]));for(const prev of old.settlements){const cur=snapshots.get(prev.id);if(!cur)fail('精算履歴は削除できません');if(!equal(without(prev,['locked']),without(cur,['locked'])))fail('精算履歴は直接変更できません');if(!prev.locked&&cur.locked)fail('再確定は新しい履歴として保存してください');}
  for(const key of ['events','people'])if(old[key].some(x=>!s[key].some(y=>y.id===x.id)))fail(key==='events'?'予定は削除ではなく中止してください':'部員は削除ではなく在籍状態を変更してください');
  const prior=new Map(old.plans.map(p=>[p.id,p])),locked=new Set(old.settlements.filter(x=>x.locked).flatMap(x=>x.planIds||[]));

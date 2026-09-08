@@ -26,3 +26,14 @@ test('LINE exchange uses PKCE and verified claims; invalid claims rejected',asyn
 
 test('gym assignment is separate, validated and protected by gym role',()=>{const s=populated();s.venues=[{id:'v',name:'体育館',courts:4}];const rel={e:{venueId:'v'}};const next=update(s,{venueAssignments:rel});assert.deepEqual(next.events,s.events);assert.deepEqual(next.training,s.training);assert.deepEqual(next.venueAssignments,rel);assert.throws(()=>update(s,{venueAssignments:rel},viewer),e=>e.status===403);s.roles['体育館']=['viewer'];assert.deepEqual(update(s,{venueAssignments:rel},viewer).venueAssignments,rel);for(const bad of [{e:{venueId:'bad'}},{bad:{venueId:'v'}},[]])assert.throws(()=>update(s,{venueAssignments:bad}));});
 test('executive schedule completion updates the source once with limited authority',()=>{const s=populated();s.events.push({id:'ex',title:'幹部会',kind:'executive',date:today(),start:'18:00',end:'19:00',assignees:[],notifications:['P1M','P7D','P3D','P1D']});s.events.push({...s.events[1],id:'ex2'});const events=structuredClone(s.events);events[1].done=true;const got=update(s,{events},viewer);assert.equal(got.tasks.length,0);assert.equal(got.events.length,3);assert.equal(got.events[1].completedBy,viewer.id);assert.deepEqual(got.events[1].notifications,s.events[1].notifications);events[1].title='不正変更';assert.throws(()=>update(s,{events},viewer),e=>e.status===403);const club=structuredClone(s.events);club[0].done=true;assert.throws(()=>update(s,{events:club},viewer),e=>e.status===403);});
+
+test('court allocation permission, input validation and snapshots survive unrelated updates',()=>{
+ const s=populated(),ids=s.people.map(p=>p.id);s.venues=[{id:'v',name:'体育館',courts:1}];s.venueAssignments={e:{venueId:'v'}};
+ const data={ranking:ids,sessions:{e:{source:{participants:ids,ranking:ids,courts:1,venueId:'v'},level:[ids],balanced:[ids]}}};
+ assert.throws(()=>update(s,{courtAssignments:data},viewer),e=>e.status===403);
+ const saved=update(s,{courtAssignments:data});assert.deepEqual(saved.courtAssignments,data);
+ const clone=structuredClone(data);clone.sessions.e.balanced=[['m0','m0','m2','m3']];assert.throws(()=>update(saved,{courtAssignments:clone}));
+ const stale=structuredClone(data);stale.sessions.e.source.courts=2;assert.throws(()=>update(saved,{courtAssignments:stale}),e=>e.status===409);
+ saved.roles['コート割']=['viewer'];const newRank=structuredClone(data);newRank.ranking.reverse();assert.deepEqual(update(saved,{courtAssignments:newRank},viewer).courtAssignments.ranking,newRank.ranking);
+ assert.deepEqual(update(saved,{attendance:{...saved.attendance,'e|m0':false}}).courtAssignments,data);
+});
