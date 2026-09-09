@@ -58,7 +58,7 @@ function opDragMove(x,y){opDrag.x=x;opDrag.y=y;opGhost.style.transform=`translat
 function opDragScroll(){if(!opDrag)return;const hit=document.elementFromPoint(opDrag.x,opDrag.y),pane=hit?.closest('[data-car-scroll]');if(pane){const r=pane.getBoundingClientRect();if(opDrag.x<r.left+32)pane.scrollLeft-=9;if(opDrag.x>r.right-32)pane.scrollLeft+=9;document.querySelectorAll('.drop-over').forEach(e=>e.classList.remove('drop-over'));opDrag.target=document.elementFromPoint(opDrag.x,opDrag.y)?.closest('[data-drop]');opDrag.target?.classList.add('drop-over');}opFrame=requestAnimationFrame(opDragScroll);}
 window.addEventListener('pointerdown',ev=>{
  const el=ev.target.closest('[data-person]');if(!el||getRoute()[0]!=='car')return;ev.stopImmediatePropagation();if(ev.pointerType==='touch')return;if(el.disabled||ev.button!==0||ctx.busy||!edit('plans')||lockedPlan(getRoute()[1]))return;
- opDragClean();opHold={el,mid:el.dataset.person,id:ev.pointerId,x:ev.clientX,y:ev.clientY};opHold.mouse=ev.pointerType==='mouse';opHold.timer=setTimeout(opDragStart,60);
+ opDragClean();opHold={el,mid:el.dataset.person,id:ev.pointerId,x:ev.clientX,y:ev.clientY};opHold.mouse=ev.pointerType==='mouse';opHold.timer=setTimeout(opDragStart,80);
 },true);
 window.addEventListener('pointermove',ev=>{if(!opHold||opHold.touch||ev.pointerId!==opHold.id)return;ev.stopImmediatePropagation();if(!opDrag){if(Math.hypot(ev.clientX-opHold.x,ev.clientY-opHold.y)<=10)return;if(opHold.mouse)opDragStart();else{opDragClean();return;}}ev.preventDefault();opDragMove(ev.clientX,ev.clientY);},{capture:true,passive:false});
 // Touch owns its gesture so native horizontal panning cannot cancel a held name.
@@ -66,7 +66,7 @@ window.addEventListener('touchstart',ev=>{
  const el=ev.target.closest('[data-person]');if(!el||getRoute()[0]!=='car')return;
  if(ev.touches.length!==1){opDragClean();return;}
  if(el.disabled||ctx.busy||!edit('plans')||lockedPlan(getRoute()[1]))return;
- const t=ev.touches[0];opDragClean();opHold={el,mid:el.dataset.person,id:t.identifier,x:t.clientX,y:t.clientY,touch:true};opHold.timer=setTimeout(opDragStart,60);
+ const t=ev.touches[0];opDragClean();opHold={el,mid:el.dataset.person,id:t.identifier,x:t.clientX,y:t.clientY,touch:true};opHold.timer=setTimeout(opDragStart,80);
 },{capture:true,passive:false});
 window.addEventListener('touchmove',ev=>{
  if(!opHold?.touch)return;const t=Array.from(ev.touches).find(t=>t.identifier===opHold.id);if(!t)return;
