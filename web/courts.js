@@ -1,16 +1,17 @@
 'use strict';
-const courtUI={eventId:'',mode:'level',groupId:'',rank:null};
+const courtUI={eventId:'',mode:'level',groupId:'',rank:null,months:{}};
 function courtData(){return state.courtAssignments||{ranking:[],sessions:{}};}
 function courtParticipants(eid){const ids=new Set(participants(eid).map(p=>p.id));return courtData().ranking.filter(id=>ids.has(id));}
 function courtSnapshot(eid){return {participants:participants(eid).map(p=>p.id).sort(),ranking:courtParticipants(eid),courts:eventVenue(event(eid))?.courts||0,venueId:eventVenue(event(eid))?.id||''};}
 function courtStale(saved,eid){return JSON.stringify(saved.source)!==JSON.stringify(courtSnapshot(eid));}
 function renderCourts(){
- if(courtUI.groupId!==state.group.id){courtUI.groupId=state.group.id;courtUI.eventId='';courtUI.rank=null;}
+ if(courtUI.groupId!==state.group.id){courtUI.groupId=state.group.id;courtUI.eventId='';courtUI.rank=null;courtUI.months={};}
  const days=clubEvents().filter(e=>!e.cancelled),upcoming=days.find(e=>(e.endDate||e.date)>=DEMO_TODAY);
  if(!days.some(e=>e.id===courtUI.eventId))courtUI.eventId=(upcoming||days[days.length-1])?.id||'';
  const e=event(courtUI.eventId),gym=e&&eventVenue(e),count=e?participants(e.id).length:0,ranked=e?courtParticipants(e.id):[],saved=courtData().sessions[e?.id],ready=e&&gym?.courts&&count&&ranked.length===count,ro=!edit('courtAssignments');
- let html=`<div class="court-toolbar"><a class="text-btn" href="#court-ranking">レベル順を設定</a></div>`;
- html+=`<label class="field"><span class="label">日程</span><select data-court-date>${days.map(d=>`<option value="${esc(d.id)}" ${d.id===e?.id?'selected':''}>${jpDate(d.date,true)}　${esc(d.title)}</option>`).join('')}</select></label>`;
+ let html=`<div class="court-toolbar"><a class="secondary" href="#court-ranking">レベル順を設定</a><a class="secondary" href="#attendance" data-court-attendance>出欠を調整</a></div>`;
+ const months=new Map();for(const day of [...days].sort((a,b)=>a.date.localeCompare(b.date))){const month=day.date.slice(0,7);if(!months.has(month))months.set(month,[]);months.get(month).push(day);}
+ html+=`<section class="court-date-picker"><h2 class="label">日程</h2>${[...months].map(([month,dates])=>`<details class="op-car-month" data-court-month="${month}" ${(courtUI.months[month]??(month===DEMO_TODAY.slice(0,7)))?'open':''}><summary>${Number(month.slice(0,4))}年${Number(month.slice(5))}月</summary>${dates.map(d=>`<label class="row court-date-option"><input type="radio" name="court-date" data-court-date value="${esc(d.id)}" ${d.id===e?.id?'checked':''}><span>${jpDate(d.date,true)}　${esc(d.title)}</span></label>`).join('')}</details>`).join('')}</section>`;
  html+=segments([['level','レベル順'],['balanced','均等']],courtUI.mode,'court-mode');
  if(!e)html+='<p class="empty">部活予定を登録してください</p>';
  else if(!gym?.courts)html+='<a class="row" href="#venues">体育館を割り当てる</a>';
@@ -59,3 +60,6 @@ const courtPreviousRoute=wfRenderRoute;
 wfRenderRoute=function(r,id,extra){const guarded=courtPreviousRoute(r,id,extra);if(guarded!==null)return guarded;if(r==='court-result')return renderCourtResult(id,extra);if(r==='courts')return renderCourts();if(r==='court-ranking')return renderCourtRanking();return null;};
 window.addEventListener('hashchange',()=>{if(getRoute()[0]!=='court-ranking')courtUI.rank=null;});
 if(ctx.ready)render();
+
+window.addEventListener('toggle',ev=>{const month=ev.target.dataset?.courtMonth;if(month)courtUI.months[month]=ev.target.open;},true);
+window.addEventListener('click',ev=>{if(ev.target.closest('[data-court-attendance]')){ui.attendanceMode='date';ui.attendanceEvent=courtUI.eventId;}},true);
