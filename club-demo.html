@@ -332,9 +332,11 @@ body[data-screen="car"] .app{max-width:1100px}
 
 .court-rank-name{display:flex;align-items:center;gap:6px}.court-rank-grade{font-size:11px;color:var(--green);font-weight:600;white-space:nowrap;flex-shrink:0}
 
-.court-result-heading{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px}.court-result-heading span{font-size:13px}.court-result-heading small{margin-left:auto;color:var(--green)}.court-result-grid{display:grid;grid-template-columns:repeat(var(--court-columns),minmax(0,1fr));gap:10px 6px}.court-result-grid .court-column{min-width:0}.court-result-grid .court-column h3{padding:9px 3px;font-size:12px;justify-content:center}.court-result-grid .court-name{padding:9px 3px;font-size:12px;text-align:center;white-space:normal;overflow-wrap:anywhere}
+.court-result-heading{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px}.court-result-heading span{font-size:13px}.court-result-heading small{margin-left:auto;color:var(--green)}.court-result-grid{display:grid;grid-template-columns:repeat(var(--court-columns),minmax(0,1fr));gap:10px 6px}.court-result-grid .court-column{min-width:0;align-self:start}.court-result-grid .court-column h3{padding:9px 3px;font-size:12px;justify-content:center}.court-result-grid .court-name{padding:9px 3px;font-size:12px;text-align:center;white-space:normal;overflow-wrap:anywhere}
 
 .court-toolbar>.secondary{flex:1;padding:0 8px;font-size:14px}.court-date-picker{margin-bottom:20px}.court-date-option{cursor:pointer;font-size:14px;min-height:46px}.court-date-option input{width:18px;height:18px;min-height:18px;flex-shrink:0;accent-color:var(--green)}.court-date-option:has(input:checked){color:var(--green);background:var(--green-soft)}
+
+.court-create-actions>*{flex:1;min-width:0;padding-left:8px;padding-right:8px}
 </style></head><body><div class="app" id="app"></div><div id="modal-root"></div><div id="toast-root" aria-live="polite"></div><script>'use strict';
 const clubSessionKey='club-operations-session-v1';
 const clubFlowKey='club-operations-line-flow-v1';
@@ -1505,8 +1507,7 @@ function renderCourts(){
  else if(!gym?.courts)html+='<a class="row" href="#venues">体育館を割り当てる</a>';
  else if(count&&ranked.length!==count)html+='<a class="row" href="#court-ranking">参加者のレベル順を設定してください</a>';
  else if(!count)html+='<a class="row" href="#attendance">参加者を確認してください</a>';
- if(!ro)html+=`<div class="form-actions">${action('court-create','コート割を作成',ready?'':'disabled','primary full')}</div>`;
- if(saved)html+=`<a class="text-btn" href="#court-result/${esc(e.id)}/${courtUI.mode}">保存済みのコート割を開く</a>`;
+ if(!ro||saved)html+=`<div class="form-actions court-create-actions">${!ro?action('court-create',saved?'再作成':'コート割を作成',ready?'':'disabled','primary'):''}${saved?`<a class="secondary" href="#court-result/${esc(e.id)}/${courtUI.mode}">保存済みを開く</a>`:''}</div>`;
  return shell('コート割','operations',html,'operations');
 }
 function renderCourtResult(id,mode){

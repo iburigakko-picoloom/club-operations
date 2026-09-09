@@ -17,8 +17,7 @@ function renderCourts(){
  else if(!gym?.courts)html+='<a class="row" href="#venues">体育館を割り当てる</a>';
  else if(count&&ranked.length!==count)html+='<a class="row" href="#court-ranking">参加者のレベル順を設定してください</a>';
  else if(!count)html+='<a class="row" href="#attendance">参加者を確認してください</a>';
- if(!ro)html+=`<div class="form-actions">${action('court-create','コート割を作成',ready?'':'disabled','primary full')}</div>`;
- if(saved)html+=`<a class="text-btn" href="#court-result/${esc(e.id)}/${courtUI.mode}">保存済みのコート割を開く</a>`;
+ if(!ro||saved)html+=`<div class="form-actions court-create-actions">${!ro?action('court-create',saved?'再作成':'コート割を作成',ready?'':'disabled','primary'):''}${saved?`<a class="secondary" href="#court-result/${esc(e.id)}/${courtUI.mode}">保存済みを開く</a>`:''}</div>`;
  return shell('コート割','operations',html,'operations');
 }
 function renderCourtResult(id,mode){
