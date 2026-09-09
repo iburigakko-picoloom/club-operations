@@ -13,19 +13,13 @@ function create(ids,courts,rng=Math.random){
  const capacities=shuffle(sizes(ids.length,courts),rng),level=[];let offset=0;
  for(const n of capacities){level.push(ids.slice(offset,offset+n));offset+=n;}
  if(!ids.length)return {level:[],balanced:[]};
- const rank=new Map(ids.map((id,i)=>[id,i+1]));let best=null,bestScore=Infinity;
- // Each band contributes at most one person per court; compare many random deals.
- for(let trial=0;trial<300;trial++){
-  const groups=capacities.map(()=>[]);let cursor=0;
-  for(let row=0;cursor<ids.length;row++){
-   const targets=shuffle(capacities.map((n,i)=>n>row?i:-1).filter(i=>i>=0),rng);
-   for(const i of targets)groups[i].push(ids[cursor++]);
-  }
-  const score=meanSpread(groups,rank);
-  if(score<bestScore||score===bestScore&&rng()<.5){best=groups;bestScore=score;}
+ // Deal each rank band once, independently, without optimizing court averages.
+ const balanced=capacities.map(()=>[]);let cursor=0;
+ for(let row=0;cursor<ids.length;row++){
+  const targets=shuffle(capacities.map((n,i)=>n>row?i:-1).filter(i=>i>=0),rng);
+  for(const i of targets)balanced[i].push(ids[cursor++]);
  }
- // Court labels should not permanently favor one group size or level band.
- return {level,balanced:shuffle(best,rng).map(g=>g.sort((a,b)=>rank.get(a)-rank.get(b)))};
+ return {level,balanced};
 }
 const api={sizes,create,meanSpread};root.CourtDomain=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

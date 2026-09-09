@@ -8,10 +8,16 @@ test('four people by default; remainders and limited gyms are balanced',()=>{
 test('every participant appears exactly once, court counts and sizes hold, input stays untouched',()=>{
  for(const n of [1,3,4,7,11,16,17,22,31,48,65])for(const c of [1,2,4,6,10]){const ids=Array.from({length:n},(_,i)=>'m'+i),before=[...ids],out=D.create(ids,c,random(n+c));for(const groups of [out.level,out.balanced]){assert.ok(groups.length<=c);assert.deepEqual(groups.flat().sort(),[...ids].sort());const ns=groups.map(g=>g.length);assert.ok(Math.max(...ns)-Math.min(...ns)<=1);}assert.deepEqual(out.level.flat(),ids);assert.deepEqual(ids,before);}
 });
-test('equal version mixes level bands and improves average-rank balance while varying the draw',()=>{
- const ids=Array.from({length:24},(_,i)=>'m'+i),rank=new Map(ids.map((id,i)=>[id,i+1])),variants=new Set();
- for(let seed=1;seed<12;seed++){const out=D.create(ids,6,random(seed));assert.ok(D.meanSpread(out.balanced,rank)<D.meanSpread(out.level,rank));assert.ok(D.meanSpread(out.balanced,rank)<=2);for(const group of out.balanced)assert.deepEqual(group.map(id=>Math.floor(rank.get(id)-1)/6|0).sort(),[0,1,2,3]);variants.add(JSON.stringify(out.balanced));}assert.ok(variants.size>5);
+test('seven courts receive one random person from each seven-rank band, including remainders',()=>{
+ const variants=new Set();for(const n of [28,31,35])for(let seed=1;seed<=20;seed++){
+ const ids=Array.from({length:n},(_,i)=>i),out=D.create(ids,7,random(seed));assert.equal(out.balanced.length,7);
+ for(const group of out.balanced){const bands=group.map(id=>Math.floor(id/7));assert.equal(new Set(bands).size,bands.length);for(let band=0;band<Math.floor(n/7);band++)assert.ok(bands.includes(band));}
+ variants.add(JSON.stringify(out.balanced));}assert.ok(variants.size>20);
 });
+test('band shuffle makes one draw without retrying for closer court averages',()=>{
+ let calls=0;const ids=Array.from({length:28},(_,i)=>i);D.create(ids,7,()=>{calls++;return .5;});assert.equal(calls,6+4*6);
+});
+
 function harness(){
  const listeners={},state={group:{id:'g'},people:Array.from({length:9},(_,i)=>({id:'m'+i,name:'部員'+i,active:true})),events:[{id:'e',date:'2026-09-10',title:'練習',kind:'club'}],venues:[{id:'v',name:'体育館',courts:2}],attendance:{},training:{unchanged:true},plans:[{unchanged:true}]};let saved='',route=['courts'];
  const c={state,CourtDomain:D,document:{querySelectorAll:()=>[]},ctx:{ready:false,busy:false,user:{}},window:{addEventListener:(k,f)=>(listeners[k]||=[]).push(f),scrollY:0,scrollTo:()=>{}},renderOperations:()=>'',wfRenderRoute:()=>c.ctx.user?null:'LOGIN',render:()=>{},entry:()=>'',getRoute:()=>route,edit:()=>true,esc:String,jpDate:String,DEMO_TODAY:'2026-09-09',event:id=>c.state.events.find(e=>e.id===id),eventVenue:()=>c.state.venues[0],participants:()=>c.state.people.filter(p=>p.active&&c.state.attendance[p.id]!==false),clubEvents:()=>c.state.events,pName:id=>c.state.people.find(p=>p.id===id)?.name,shell:(a,b,html)=>html,action:(a,label,attrs='')=>`<button data-act="${a}" ${attrs}>${label}</button>`,segments:()=>'',actHandled:()=>{},toast:()=>{},go:r=>route=[r],wfSave:async fn=>{fn();saved=JSON.stringify(c.state);}};
