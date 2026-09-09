@@ -174,14 +174,14 @@ def test_invalid_plan_structure_not_persisted(env,key,value):
  assert get(env,s['group']['id'])['plans']==[]
 
 
-def test_cancelled_plan_cancels_notifications(env):
+def test_plans_do_not_create_notifications(env):
  u=account(env);s=populate(env,u,create(env,u))
  e=copy.deepcopy(s['events'][0]);e['date']=(module.now().date()+module.timedelta(days=10)).isoformat()
  p=make_plan();p['notifications']=['P1D']
  r=patch(env,u,s,{'events':[e],'plans':[p]});assert r.status_code==200;s=r.json()
  gid=s['group']['id']
  with module.connect() as c:
-  assert c.execute("SELECT count(*) FROM jobs WHERE group_id=? AND status='pending'",(gid,)).fetchone()[0]==1
+  assert c.execute("SELECT count(*) FROM jobs WHERE group_id=? AND status='pending'",(gid,)).fetchone()[0]==0
  p['status']='cancelled'
  assert patch(env,u,s,{'plans':[p]}).status_code==200
  with module.connect() as c:
