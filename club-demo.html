@@ -311,6 +311,14 @@ body[data-screen="car"] .app{max-width:1100px}
 @media(max-height:650px){.cal-footer{height:104px;min-height:104px;padding:8px 0}}
 
 .court-toolbar,.court-context{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}.court-context{font-size:14px}.court-board{display:flex;gap:10px;overflow-x:auto;padding:4px 0 12px;touch-action:pan-x pan-y}.court-column{flex:0 0 130px;border:1px solid var(--line);border-radius:5px;overflow:hidden}.court-column h3{font-size:14px;padding:12px;background:var(--green-soft);display:flex;justify-content:space-between}.court-column h3 small{font-weight:400}.court-name{padding:12px 8px;border-top:1px solid var(--line);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.court-ranking .row{min-height:52px;padding:5px 0;gap:6px}.court-ranking select{width:70px;padding:6px;min-height:38px;font-size:14px}.court-ranking .icon-btn{width:30px;min-height:40px}.court-rank-no{font-size:12px;color:var(--muted);width:22px}.court-ranking .row-main{font-size:14px}
+
+.court-ranking .court-rank-row{height:56px;min-height:56px;touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab;background:#fff}
+.court-ranking .court-rank-row .row-main::after{content:'⠿';color:#a4b2a7;font-size:18px;float:right;margin:0 8px;pointer-events:none}
+.court-rank-sorting{transition:transform 180ms cubic-bezier(.2,.8,.2,1);will-change:transform}
+.court-rank-lifted{visibility:hidden}
+.court-rank-ghost{position:fixed;z-index:200;pointer-events:none;margin:0;background:#f2f9f3;border:1px solid #8dba99;border-radius:6px;box-shadow:0 8px 22px #163e2526;padding:5px 8px;gap:6px;font-size:14px;cursor:grabbing}
+.court-rank-ghost select{width:70px;padding:6px;min-height:38px;font-size:14px}
+@media(prefers-reduced-motion:reduce){.court-rank-sorting{transition:none}}
 </style></head><body><div class="app" id="app"></div><div id="modal-root"></div><div id="toast-root" aria-live="polite"></div><script>'use strict';
 const clubSessionKey='club-operations-session-v1';
 const clubFlowKey='club-operations-line-flow-v1';
@@ -1463,16 +1471,17 @@ function renderCourtRanking(){
  const members=state.people.filter(p=>p.active!==false),ids=new Set(members.map(p=>p.id));
  if(!courtUI.rank)courtUI.rank=[...courtData().ranking.filter(id=>ids.has(id)),...members.filter(p=>!courtData().ranking.includes(p.id)).map(p=>p.id)];
  const ro=!edit('courtAssignments');
- return shell('レベル順','courts',`<p class="note">上ほどレベルが高い順。順位を変えて移動できます。</p><div class="court-ranking">${courtUI.rank.map((id,i)=>`<div class="row"><span class="court-rank-no">${i+1}</span><span class="row-main">${esc(pName(id))}</span><select data-court-rank="${esc(id)}" aria-label="${esc(pName(id))}の順位" ${ro?'disabled':''}>${courtUI.rank.map((_,j)=>`<option value="${j}" ${i===j?'selected':''}>${j+1}位</option>`).join('')}</select>${action('court-up','↑',`data-id="${esc(id)}" aria-label="${esc(pName(id))}を上へ" ${ro||i===0?'disabled':''}`,'icon-btn')}${action('court-down','↓',`data-id="${esc(id)}" aria-label="${esc(pName(id))}を下へ" ${ro||i===courtUI.rank.length-1?'disabled':''}`,'icon-btn')}</div>`).join('')||'<p class="empty">部員を登録してください</p>'}</div>`,'courts',ro?'':action('court-rank-save','保存','','text-btn'));
+ return shell('レベル順','courts',`<p class="note">上ほどレベルが高い順。名前を長押しして移動。</p><div class="court-ranking">${courtUI.rank.map((id,i)=>`<div class="row court-rank-row" data-rank-person="${esc(id)}"><span class="court-rank-no">${i+1}</span><span class="row-main">${esc(pName(id))}</span><select data-court-rank="${esc(id)}" aria-label="${esc(pName(id))}の順位" ${ro?'disabled':''}>${courtUI.rank.map((_,j)=>`<option value="${j}" ${i===j?'selected':''}>${j+1}位</option>`).join('')}</select></div>`).join('')||'<p class="empty">部員を登録してください</p>'}</div>`,'courts',ro?'':action('court-rank-save','保存','','text-btn'));
 }
-function courtMove(id,index){const i=courtUI.rank?.indexOf(id);if(i===undefined||i<0)return;courtUI.rank.splice(i,1);courtUI.rank.splice(Math.max(0,Math.min(index,courtUI.rank.length)),0,id);const y=window.scrollY;render();window.scrollTo(0,y);}
+function courtRankRects(){return new Map([...document.querySelectorAll('[data-rank-person]')].map(el=>[el.dataset.rankPerson,el.getBoundingClientRect()]));}
+function courtRankAnimate(before,moved){if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;document.querySelectorAll('[data-rank-person]').forEach(el=>{const old=before.get(el.dataset.rankPerson),now=el.getBoundingClientRect();if(old&&el.animate){const dx=old.left-now.left,dy=old.top-now.top;if(dx||dy)el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'translate(0,0)'}],{duration:240,easing:'cubic-bezier(.2,.8,.2,1)'});if(el.dataset.rankPerson===moved)el.animate([{backgroundColor:'#dcefe0'},{backgroundColor:'#ffffff'}],{duration:650});}});}
+function courtMove(id,index,before=courtRankRects()){const i=courtUI.rank?.indexOf(id);if(i===undefined||i<0)return;courtUI.rank.splice(i,1);courtUI.rank.splice(Math.max(0,Math.min(index,courtUI.rank.length)),0,id);const y=window.scrollY;render();window.scrollTo(0,y);courtRankAnimate(before,id);}
 window.addEventListener('change',ev=>{if(ev.target.matches('[data-court-date]')){courtUI.eventId=ev.target.value;render();}if(ev.target.matches('[data-court-rank]')&&edit('courtAssignments')&&!ctx.busy)courtMove(ev.target.dataset.courtRank,Number(ev.target.value));});
 window.addEventListener('click',async ev=>{
  const b=ev.target.closest('[data-act^="court-"]');if(!b||b.disabled)return;actHandled(ev);const d=b.dataset;
  if(d.act==='court-mode'){courtUI.mode=d.value;render();return;}
  try{
   if(ctx.busy||!edit('courtAssignments'))throw Error('コート割の編集権限を確認してください');
-  if(d.act==='court-up'||d.act==='court-down'){courtMove(d.id,courtUI.rank.indexOf(d.id)+(d.act==='court-up'?-1:1));return;}
   if(d.act==='court-rank-save'){const rank=[...courtUI.rank];await wfSave(()=>{state.courtAssignments||={ranking:[],sessions:{}};state.courtAssignments.ranking=rank;});courtUI.rank=null;go('courts');return;}
   if(d.act==='court-create'||d.act==='court-shuffle'){
    const e=event(courtUI.eventId),gym=e&&eventVenue(e),ranked=e?courtParticipants(e.id):[];
@@ -1490,4 +1499,48 @@ const courtPreviousRoute=wfRenderRoute;
 wfRenderRoute=function(r,id,extra){const guarded=courtPreviousRoute(r,id,extra);if(guarded!==null)return guarded;if(r==='courts')return renderCourts();if(r==='court-ranking')return renderCourtRanking();return null;};
 window.addEventListener('hashchange',()=>{if(getRoute()[0]!=='court-ranking')courtUI.rank=null;});
 if(ctx.ready)render();
+</script><script>'use strict';
+let courtPress=null,courtDrag=null,courtDragFrame=0,courtDragSuppress=0;
+function courtDragAllowed(){return getRoute()[0]==='court-ranking'&&edit('courtAssignments')&&!ctx.busy&&!ctx.conflict;}
+function courtDragStart(){
+ const p=courtPress;if(!p||!p.row.isConnected||!courtDragAllowed())return courtDragClean();
+ const rows=[...document.querySelectorAll('[data-rank-person]')],from=rows.indexOf(p.row);if(from<0)return courtDragClean();
+ const box=p.row.getBoundingClientRect(),ghost=p.row.cloneNode(true);ghost.removeAttribute('data-rank-person');ghost.classList.add('court-rank-ghost');ghost.setAttribute('aria-hidden','true');ghost.inert=true;
+ Object.assign(ghost.style,{left:box.left+'px',top:box.top+'px',width:box.width+'px',height:box.height+'px'});document.body.appendChild(ghost);
+ courtDrag={rows,from,to:from,id:p.row.dataset.rankPerson,ghost,height:box.height,offset:p.y-box.top,y:p.y};p.row.classList.add('court-rank-lifted');rows.forEach(el=>el.classList.add('court-rank-sorting'));courtDragTick();
+}
+function courtDragPosition(y){
+ const d=courtDrag;if(!d)return;d.y=y;d.ghost.style.top=(y-d.offset)+'px';
+ const start=d.rows[0].parentElement.getBoundingClientRect().top,center=y-d.offset+d.height/2;
+ d.to=Math.max(0,Math.min(d.rows.length-1,Math.floor((center-start)/d.height)));
+ d.rows.forEach((el,i)=>{const shift=i===d.from?0:d.to>d.from&&i>d.from&&i<=d.to?-d.height:d.to<d.from&&i>=d.to&&i<d.from?d.height:0;el.dataset.rankShift=String(shift);el.style.transform=`translateY(${shift}px)`;});
+}
+function courtDragTick(){
+ const d=courtDrag;if(!d)return;if(!courtDragAllowed()||!d.rows[0].isConnected){courtDragClean();return;}
+ const delta=d.y<110?-8:d.y>window.innerHeight-90?8:0;if(delta)window.scrollBy(0,delta);courtDragPosition(d.y);courtDragFrame=requestAnimationFrame(courtDragTick);
+}
+function courtDragClean(){
+ clearTimeout(courtPress?.timer);cancelAnimationFrame(courtDragFrame);courtDragFrame=0;
+ if(courtDrag){courtDrag.ghost.remove();courtDrag.rows.forEach(el=>{el.style.transform='';delete el.dataset.rankShift;el.classList.remove('court-rank-sorting','court-rank-lifted');});}
+ courtDrag=null;courtPress=null;
+}
+function courtDragFinish(cancel=false){
+ const d=courtDrag;if(!d){courtDragClean();return;}
+ const before=courtRankRects();before.set(d.id,d.ghost.getBoundingClientRect());const allowed=courtDragAllowed();courtDragSuppress=Date.now()+500;courtDragClean();
+ if(!cancel&&allowed&&d.to!==d.from)courtMove(d.id,d.to,before);else courtRankAnimate(before,d.id);
+}
+function courtDragPress(ev,x,y,touch,id){
+ if(!courtDragAllowed()||ev.target.closest('select,input,button,a'))return;
+ const row=ev.target.closest('[data-rank-person]');if(!row)return;courtDragClean();courtPress={row,x,y,touch,id};if(touch)courtPress.timer=setTimeout(courtDragStart,150);
+}
+function courtDragMove(x,y){const p=courtPress;if(!p)return;if(!courtDrag){if(Math.hypot(x-p.x,y-p.y)>8){if(p.touch)courtDragClean();else courtDragStart();}}if(courtDrag)courtDragPosition(y);}
+window.addEventListener('touchstart',ev=>{if(ev.touches.length!==1){courtDragFinish(true);return;}const t=ev.touches[0];courtDragPress(ev,t.clientX,t.clientY,true,t.identifier);},{capture:true,passive:true});
+window.addEventListener('touchmove',ev=>{if(!courtPress?.touch)return;const t=[...ev.touches].find(t=>t.identifier===courtPress.id);if(!t||ev.touches.length!==1){courtDragFinish(true);return;}courtDragMove(t.clientX,t.clientY);if(courtDrag)ev.preventDefault();},{capture:true,passive:false});
+for(const type of ['touchend','touchcancel'])window.addEventListener(type,ev=>{if(!courtPress?.touch||![...ev.changedTouches].some(t=>t.identifier===courtPress.id))return;if(courtDrag)ev.preventDefault();courtDragFinish(type==='touchcancel');},{capture:true,passive:false});
+window.addEventListener('pointerdown',ev=>{if(ev.pointerType==='touch'||ev.button!==0)return;courtDragPress(ev,ev.clientX,ev.clientY,false,ev.pointerId);});
+window.addEventListener('pointermove',ev=>{if(!courtPress||courtPress.touch||courtPress.id!==ev.pointerId)return;courtDragMove(ev.clientX,ev.clientY);if(courtDrag)ev.preventDefault();});
+for(const type of ['pointerup','pointercancel'])window.addEventListener(type,ev=>{if(courtPress&&!courtPress.touch&&courtPress.id===ev.pointerId)courtDragFinish(type==='pointercancel');});
+for(const type of ['blur','hashchange','resize'])window.addEventListener(type,()=>courtDragFinish(true));
+window.addEventListener('contextmenu',ev=>{if(courtPress||ev.target.closest('[data-rank-person]'))ev.preventDefault();});
+window.addEventListener('click',ev=>{if((courtDrag||Date.now()<courtDragSuppress)&&getRoute()[0]==='court-ranking'){ev.preventDefault();ev.stopImmediatePropagation();}},true);
 </script></body></html>

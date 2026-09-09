@@ -25,16 +25,17 @@ function renderCourtRanking(){
  const members=state.people.filter(p=>p.active!==false),ids=new Set(members.map(p=>p.id));
  if(!courtUI.rank)courtUI.rank=[...courtData().ranking.filter(id=>ids.has(id)),...members.filter(p=>!courtData().ranking.includes(p.id)).map(p=>p.id)];
  const ro=!edit('courtAssignments');
- return shell('レベル順','courts',`<p class="note">上ほどレベルが高い順。順位を変えて移動できます。</p><div class="court-ranking">${courtUI.rank.map((id,i)=>`<div class="row"><span class="court-rank-no">${i+1}</span><span class="row-main">${esc(pName(id))}</span><select data-court-rank="${esc(id)}" aria-label="${esc(pName(id))}の順位" ${ro?'disabled':''}>${courtUI.rank.map((_,j)=>`<option value="${j}" ${i===j?'selected':''}>${j+1}位</option>`).join('')}</select>${action('court-up','↑',`data-id="${esc(id)}" aria-label="${esc(pName(id))}を上へ" ${ro||i===0?'disabled':''}`,'icon-btn')}${action('court-down','↓',`data-id="${esc(id)}" aria-label="${esc(pName(id))}を下へ" ${ro||i===courtUI.rank.length-1?'disabled':''}`,'icon-btn')}</div>`).join('')||'<p class="empty">部員を登録してください</p>'}</div>`,'courts',ro?'':action('court-rank-save','保存','','text-btn'));
+ return shell('レベル順','courts',`<p class="note">上ほどレベルが高い順。名前を長押しして移動。</p><div class="court-ranking">${courtUI.rank.map((id,i)=>`<div class="row court-rank-row" data-rank-person="${esc(id)}"><span class="court-rank-no">${i+1}</span><span class="row-main">${esc(pName(id))}</span><select data-court-rank="${esc(id)}" aria-label="${esc(pName(id))}の順位" ${ro?'disabled':''}>${courtUI.rank.map((_,j)=>`<option value="${j}" ${i===j?'selected':''}>${j+1}位</option>`).join('')}</select></div>`).join('')||'<p class="empty">部員を登録してください</p>'}</div>`,'courts',ro?'':action('court-rank-save','保存','','text-btn'));
 }
-function courtMove(id,index){const i=courtUI.rank?.indexOf(id);if(i===undefined||i<0)return;courtUI.rank.splice(i,1);courtUI.rank.splice(Math.max(0,Math.min(index,courtUI.rank.length)),0,id);const y=window.scrollY;render();window.scrollTo(0,y);}
+function courtRankRects(){return new Map([...document.querySelectorAll('[data-rank-person]')].map(el=>[el.dataset.rankPerson,el.getBoundingClientRect()]));}
+function courtRankAnimate(before,moved){if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;document.querySelectorAll('[data-rank-person]').forEach(el=>{const old=before.get(el.dataset.rankPerson),now=el.getBoundingClientRect();if(old&&el.animate){const dx=old.left-now.left,dy=old.top-now.top;if(dx||dy)el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'translate(0,0)'}],{duration:240,easing:'cubic-bezier(.2,.8,.2,1)'});if(el.dataset.rankPerson===moved)el.animate([{backgroundColor:'#dcefe0'},{backgroundColor:'#ffffff'}],{duration:650});}});}
+function courtMove(id,index,before=courtRankRects()){const i=courtUI.rank?.indexOf(id);if(i===undefined||i<0)return;courtUI.rank.splice(i,1);courtUI.rank.splice(Math.max(0,Math.min(index,courtUI.rank.length)),0,id);const y=window.scrollY;render();window.scrollTo(0,y);courtRankAnimate(before,id);}
 window.addEventListener('change',ev=>{if(ev.target.matches('[data-court-date]')){courtUI.eventId=ev.target.value;render();}if(ev.target.matches('[data-court-rank]')&&edit('courtAssignments')&&!ctx.busy)courtMove(ev.target.dataset.courtRank,Number(ev.target.value));});
 window.addEventListener('click',async ev=>{
  const b=ev.target.closest('[data-act^="court-"]');if(!b||b.disabled)return;actHandled(ev);const d=b.dataset;
  if(d.act==='court-mode'){courtUI.mode=d.value;render();return;}
  try{
   if(ctx.busy||!edit('courtAssignments'))throw Error('コート割の編集権限を確認してください');
-  if(d.act==='court-up'||d.act==='court-down'){courtMove(d.id,courtUI.rank.indexOf(d.id)+(d.act==='court-up'?-1:1));return;}
   if(d.act==='court-rank-save'){const rank=[...courtUI.rank];await wfSave(()=>{state.courtAssignments||={ranking:[],sessions:{}};state.courtAssignments.ranking=rank;});courtUI.rank=null;go('courts');return;}
   if(d.act==='court-create'||d.act==='court-shuffle'){
    const e=event(courtUI.eventId),gym=e&&eventVenue(e),ranked=e?courtParticipants(e.id):[];
