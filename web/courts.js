@@ -9,17 +9,23 @@ function renderCourts(){
  const days=clubEvents().filter(e=>!e.cancelled),upcoming=days.find(e=>(e.endDate||e.date)>=DEMO_TODAY);
  if(!days.some(e=>e.id===courtUI.eventId))courtUI.eventId=(upcoming||days[days.length-1])?.id||'';
  const e=event(courtUI.eventId),gym=e&&eventVenue(e),count=e?participants(e.id).length:0,ranked=e?courtParticipants(e.id):[],saved=courtData().sessions[e?.id],ready=e&&gym?.courts&&count&&ranked.length===count,ro=!edit('courtAssignments');
- let html=`<div class="court-toolbar"><a class="text-btn" href="#court-ranking">レベル順を設定</a><a class="text-btn" href="#roles">担当・権限</a></div>`;
- if(!e)return shell('コート割','operations',html+'<p class="empty">部活予定を登録してください</p>','operations');
- html+=`<label class="field"><span class="label">日程</span><select data-court-date>${days.map(d=>`<option value="${esc(d.id)}" ${d.id===e.id?'selected':''}>${jpDate(d.date,true)}　${esc(d.title)}</option>`).join('')}</select></label><div class="court-context"><span>${esc(gym?.name||'体育館の割当が必要です')}${gym?' · '+gym.courts+'面':''}</span><a class="text-btn" href="#attendance">参加 ${count}人</a></div>`;
- if(!gym)html+='<a class="row" href="#venues">体育館を割り当てる</a>';
- if(count&&ranked.length!==count)html+='<a class="row" href="#court-ranking">参加者のレベル順を確認してください</a>';
- if(saved&&courtStale(saved,e.id))html+='<p class="warning">出欠・体育館・レベル順が変わっています。再作成してください。</p>';
+ let html=`<div class="court-toolbar"><a class="text-btn" href="#court-ranking">レベル順を設定</a></div>`;
+ html+=`<label class="field"><span class="label">日程</span><select data-court-date>${days.map(d=>`<option value="${esc(d.id)}" ${d.id===e?.id?'selected':''}>${jpDate(d.date,true)}　${esc(d.title)}</option>`).join('')}</select></label>`;
  html+=segments([['level','レベル順'],['balanced','均等']],courtUI.mode,'court-mode');
- if(saved){const groups=saved[courtUI.mode]||[];html+=`<div class="court-board">${groups.map((members,i)=>`<section class="court-column"><h3>コート${i+1}<small>${members.length}人</small></h3>${members.map(id=>`<div class="court-name">${esc(pName(id))}</div>`).join('')}</section>`).join('')}</div>`;}else html+='<p class="empty">日程を選んで作成</p>';
- if(!ro)html+=`<div class="form-actions">${action('court-create',saved?'再作成':'コート割を作成',ready?'':'disabled','primary full')}${saved&&courtUI.mode==='balanced'?action('court-shuffle','再抽選',ready&&!courtStale(saved,e.id)?'':'disabled','secondary'):''}</div>`;
+ if(!e)html+='<p class="empty">部活予定を登録してください</p>';
+ else if(!gym?.courts)html+='<a class="row" href="#venues">体育館を割り当てる</a>';
+ else if(count&&ranked.length!==count)html+='<a class="row" href="#court-ranking">参加者のレベル順を設定してください</a>';
+ else if(!count)html+='<a class="row" href="#attendance">参加者を確認してください</a>';
+ if(!ro)html+=`<div class="form-actions">${action('court-create','コート割を作成',ready?'':'disabled','primary full')}</div>`;
+ if(saved)html+=`<a class="text-btn" href="#court-result/${esc(e.id)}/${courtUI.mode}">保存済みのコート割を開く</a>`;
  return shell('コート割','operations',html,'operations');
 }
+function renderCourtResult(id,mode){
+ const e=event(id),saved=courtData().sessions[id];if(!e||!saved)return shell('コート割','operations','<p class="empty">コート割を作成してください</p>','courts');
+ const selected=mode==='balanced'?'balanced':'level',groups=saved[selected]||[],gym=eventVenue(e);
+ return shell('コート割','operations',`<div class="court-result-heading"><strong>${jpDate(e.date)}</strong><span>${esc(gym?.name||'')}</span><small>${selected==='balanced'?'均等':'レベル順'}</small></div>${courtStale(saved,id)?'<p class="warning">出欠などが変わっています。作成画面から再作成してください。</p>':''}<div class="court-result-grid" style="--court-columns:${Math.max(1,Math.ceil(groups.length/2))}">${groups.map((members,i)=>`<section class="court-column"><h3>コート${i+1}</h3>${members.map(mid=>`<div class="court-name">${esc(pName(mid))}</div>`).join('')}</section>`).join('')}</div>`,'courts');
+}
+
 function renderCourtRanking(){
  if(courtUI.groupId!==state.group.id){courtUI.groupId=state.group.id;courtUI.rank=null;}
  const members=state.people.filter(p=>p.active!==false),ids=new Set(members.map(p=>p.id));
@@ -42,7 +48,7 @@ window.addEventListener('click',async ev=>{
    if(!e||e.cancelled||!gym?.courts||!ranked.length||ranked.length!==participants(e.id).length)throw Error('日程・体育館・参加者のレベル順を確認してください');
    const data=CourtDomain.create(ranked,gym.courts),source=courtSnapshot(e.id);
    if(d.act==='court-shuffle'&&(!courtData().sessions[e.id]||courtStale(courtData().sessions[e.id],e.id)))throw Error('先に再作成してください');
-   await wfSave(()=>{state.courtAssignments||={ranking:[],sessions:{}};const old=state.courtAssignments.sessions[e.id];state.courtAssignments.sessions[e.id]={source,level:d.act==='court-shuffle'?old.level:data.level,balanced:data.balanced,updatedAt:new Date().toISOString()};});toast('保存しました');
+   await wfSave(()=>{state.courtAssignments||={ranking:[],sessions:{}};const old=state.courtAssignments.sessions[e.id];state.courtAssignments.sessions[e.id]={source,level:d.act==='court-shuffle'?old.level:data.level,balanced:data.balanced,updatedAt:new Date().toISOString()};});go('court-result/'+e.id+'/'+courtUI.mode);render();toast('保存しました');
   }
  }catch(error){toast(error.message);}
 },true);
@@ -50,6 +56,6 @@ const courtPreviousOperations=renderOperations;
 renderOperations=function(){return courtPreviousOperations().replace(entry('体育館','venues','calendar'),entry('体育館','venues','calendar')+entry('コート割','courts','people'));};
 // Enter through the existing route/auth guard; never render a group before login.
 const courtPreviousRoute=wfRenderRoute;
-wfRenderRoute=function(r,id,extra){const guarded=courtPreviousRoute(r,id,extra);if(guarded!==null)return guarded;if(r==='courts')return renderCourts();if(r==='court-ranking')return renderCourtRanking();return null;};
+wfRenderRoute=function(r,id,extra){const guarded=courtPreviousRoute(r,id,extra);if(guarded!==null)return guarded;if(r==='court-result')return renderCourtResult(id,extra);if(r==='courts')return renderCourts();if(r==='court-ranking')return renderCourtRanking();return null;};
 window.addEventListener('hashchange',()=>{if(getRoute()[0]!=='court-ranking')courtUI.rank=null;});
 if(ctx.ready)render();
