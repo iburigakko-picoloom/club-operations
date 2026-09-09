@@ -249,7 +249,7 @@ bootstrap=async function(){
   try{const result=await clubFinishLine(url);if(result)go(result.linked?'account':'groups');}catch(e){if(e.handoffCode){wf.lineReturnCode=e.handoffCode;go('line-return');}else{wf.loginError=e.message;go('welcome');}}
   if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
   try{await refreshSession();}catch(e){if(e.status!==401)throw e;}
-  ctx.base=null;ctx.ready=true;if(!location.hash)go(ctx.user?'groups':'welcome');render();
+  ctx.base=null;await wfRestoreWorkspace();ctx.ready=true;if(!location.hash)go(ctx.user?'groups':'welcome');render();
   if(sessionStorage.getItem('club-invite'))await showPendingInvite();
  }catch(e){ctx.ready=true;ctx.mode='server';ctx.user=null;ctx.base=null;render();toast('共有サーバーに接続できません。デモは別の保存領域で試せます。');}
 };
@@ -258,3 +258,12 @@ bootstrap();
 
 function wfAvatar(user){const profile=user?.id===ctx.user?.id&&ctx.user?.picture?ctx.user:user,url=profile?.picture||'',initial=Array.from(user?.name||'？')[0];return `<span class="wf-avatar" aria-hidden="true"><span>${esc(initial)}</span>${/^https:\/\/profile\.line-scdn\.net\//.test(url)?`<img src="${esc(url)}" alt="" referrerpolicy="no-referrer">`:''}</span>`;}
 window.addEventListener('error',ev=>{if(ev.target.matches?.('.wf-avatar img'))ev.target.remove();},true);
+
+async function wfRestoreWorkspace(){
+ if(!ctx.user||!location.hash||['welcome','groups','account','group-create','join','line-return'].includes(getRoute()[0]))return;
+ const gid=localStorage.getItem('club-active-group');if(!gid||!ctx.groups.some(g=>g.id===gid))return;
+ state=normalize(await api('/groups/'+encodeURIComponent(gid)+'/state'));ctx.base=clone(state);
+ try{const saved=JSON.parse(sessionStorage.getItem('club-view-state')||'null');if(saved?.user===ctx.user.id&&saved.group===gid&&saved.hash===location.hash)for(const key of wfViewKeys)if(Object.hasOwn(saved.ui,key))ui[key]=saved.ui[key];}catch{}
+}
+const wfViewKeys=['attendanceMode','attendanceEvent','attendanceMember','attendanceMonths','calendarYear','calendarMonth','taskTab','leg'];
+window.addEventListener('pagehide',()=>{if(ctx.mode!=='server'||!ctx.user||!ctx.base)return;try{sessionStorage.setItem('club-view-state',JSON.stringify({user:ctx.user.id,group:state.group.id,hash:location.hash,ui:Object.fromEntries(wfViewKeys.map(k=>[k,ui[k]]))}));}catch{}});
