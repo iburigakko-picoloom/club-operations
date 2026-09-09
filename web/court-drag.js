@@ -4,6 +4,7 @@ function courtDragAllowed(){return getRoute()[0]==='court-ranking'&&edit('courtA
 function courtDragStart(){
  const p=courtPress;if(!p||!p.row.isConnected||!courtDragAllowed())return courtDragClean();
  const rows=[...document.querySelectorAll('[data-rank-person]')],from=rows.indexOf(p.row);if(from<0)return courtDragClean();
+ window.getSelection?.()?.removeAllRanges();
  const box=p.row.getBoundingClientRect(),ghost=p.row.cloneNode(true);ghost.removeAttribute('data-rank-person');ghost.classList.add('court-rank-ghost');ghost.setAttribute('aria-hidden','true');ghost.inert=true;
  Object.assign(ghost.style,{left:box.left+'px',top:box.top+'px',width:box.width+'px',height:box.height+'px'});document.body.appendChild(ghost);
  courtDrag={rows,from,to:from,id:p.row.dataset.rankPerson,ghost,height:box.height,offset:p.y-box.top,y:p.y};p.row.classList.add('court-rank-lifted');rows.forEach(el=>el.classList.add('court-rank-sorting'));courtDragTick();
@@ -42,3 +43,6 @@ for(const type of ['pointerup','pointercancel'])window.addEventListener(type,ev=
 for(const type of ['blur','hashchange','resize'])window.addEventListener(type,()=>courtDragFinish(true));
 window.addEventListener('contextmenu',ev=>{if(courtPress||ev.target.closest('[data-rank-person]'))ev.preventDefault();});
 window.addEventListener('click',ev=>{if((courtDrag||Date.now()<courtDragSuppress)&&getRoute()[0]==='court-ranking'){ev.preventDefault();ev.stopImmediatePropagation();}},true);
+
+window.addEventListener('selectstart',ev=>{if(ev.target.closest?.('.court-rank-row')&&!ev.target.closest('select,input,textarea'))ev.preventDefault();},true);
+window.addEventListener('dragstart',ev=>{if(ev.target.closest?.('.court-rank-row'))ev.preventDefault();},true);

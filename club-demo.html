@@ -319,6 +319,8 @@ body[data-screen="car"] .app{max-width:1100px}
 .court-rank-ghost{position:fixed;z-index:200;pointer-events:none;margin:0;background:#f2f9f3;border:1px solid #8dba99;border-radius:6px;box-shadow:0 8px 22px #163e2526;padding:5px 8px;gap:6px;font-size:14px;cursor:grabbing}
 .court-rank-ghost select{width:70px;padding:6px;min-height:38px;font-size:14px}
 @media(prefers-reduced-motion:reduce){.court-rank-sorting{transition:none}}
+
+.court-rank-row,.court-rank-row .row-main,.court-rank-no,.court-rank-grip{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none}
 </style></head><body><div class="app" id="app"></div><div id="modal-root"></div><div id="toast-root" aria-live="polite"></div><script>'use strict';
 const clubSessionKey='club-operations-session-v1';
 const clubFlowKey='club-operations-line-flow-v1';
@@ -1505,6 +1507,7 @@ function courtDragAllowed(){return getRoute()[0]==='court-ranking'&&edit('courtA
 function courtDragStart(){
  const p=courtPress;if(!p||!p.row.isConnected||!courtDragAllowed())return courtDragClean();
  const rows=[...document.querySelectorAll('[data-rank-person]')],from=rows.indexOf(p.row);if(from<0)return courtDragClean();
+ window.getSelection?.()?.removeAllRanges();
  const box=p.row.getBoundingClientRect(),ghost=p.row.cloneNode(true);ghost.removeAttribute('data-rank-person');ghost.classList.add('court-rank-ghost');ghost.setAttribute('aria-hidden','true');ghost.inert=true;
  Object.assign(ghost.style,{left:box.left+'px',top:box.top+'px',width:box.width+'px',height:box.height+'px'});document.body.appendChild(ghost);
  courtDrag={rows,from,to:from,id:p.row.dataset.rankPerson,ghost,height:box.height,offset:p.y-box.top,y:p.y};p.row.classList.add('court-rank-lifted');rows.forEach(el=>el.classList.add('court-rank-sorting'));courtDragTick();
@@ -1543,4 +1546,7 @@ for(const type of ['pointerup','pointercancel'])window.addEventListener(type,ev=
 for(const type of ['blur','hashchange','resize'])window.addEventListener(type,()=>courtDragFinish(true));
 window.addEventListener('contextmenu',ev=>{if(courtPress||ev.target.closest('[data-rank-person]'))ev.preventDefault();});
 window.addEventListener('click',ev=>{if((courtDrag||Date.now()<courtDragSuppress)&&getRoute()[0]==='court-ranking'){ev.preventDefault();ev.stopImmediatePropagation();}},true);
+
+window.addEventListener('selectstart',ev=>{if(ev.target.closest?.('.court-rank-row')&&!ev.target.closest('select,input,textarea'))ev.preventDefault();},true);
+window.addEventListener('dragstart',ev=>{if(ev.target.closest?.('.court-rank-row'))ev.preventDefault();},true);
 </script></body></html>
