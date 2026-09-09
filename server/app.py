@@ -507,12 +507,6 @@ def schedule_jobs(c,gid,s,old,operators,owner):
             dt=datetime.fromisoformat(x['date']+'T'+(x.get('time') or x.get('start') or '09:00')).replace(tzinfo=JST)
             targets=x.get('assignees') or operators
             add(typ,x,targets,dt,f'{typ}/{x["id"]}',x.get('notifications',[]))
-    es={x['id']:x for x in s['events']}
-    for p in s['plans']:
-        e=es[p['eventId']]
-        if e.get('cancelled') or p.get('status')=='cancelled':continue
-        dt=datetime.fromisoformat(e['date']+'T'+(e.get('start') or '09:00')).replace(tzinfo=JST)
-        add('car',dict(p,title='配車を確認'),s['roles'].get('配車',[])+[owner],dt,'car/'+p['id'],p.get('notifications',s['settings'].get('reminders',[])))
     old_notices={x['id']:x for x in old.get('notices',[])}
     for n in s['notices']:
         # notifyVersion is explicit user action; unrelated data edits do not resend.

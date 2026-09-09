@@ -24,7 +24,6 @@ export function reminderJobs(gid,s,operators,owner,appUrl,now=Date.now()/1000){
   }
  };
  for(const [type,items] of [['event',s.events],['task',s.tasks]])for(const x of items||[])add(type,x,x.assignees?.length?x.assignees:operators,x.date,x.time||x.start,x.notifications);
- for(const p of s.plans||[]){const e=s.events.find(e=>e.id===p.eventId);if(!e||e.cancelled||p.status==='cancelled')continue;add('car',{...p,title:'配車を確認'},[...(s.roles?.['配車']||[]),owner],e.date,e.start,p.notifications??s.settings?.reminders);}
  return jobs;
 }
 export async function scheduleJobs(c,gid,s,old,operators,owner,appUrl,now=Date.now()/1000){
