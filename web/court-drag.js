@@ -30,7 +30,7 @@ function courtDragFinish(cancel=false){
  if(!cancel&&allowed&&d.to!==d.from)courtMove(d.id,d.to,before);else courtRankAnimate(before,d.id);
 }
 function courtDragPress(ev,x,y,touch,id){
- if(!courtDragAllowed()||ev.target.closest('select,input,button,a'))return;
+ if(!courtDragAllowed()||ev.target.closest('select,input,a')||(ev.target.closest('button')&&!ev.target.closest('[data-rank-drag]')))return;
  const row=ev.target.closest('[data-rank-person]');if(!row)return;courtDragClean();courtPress={row,x,y,touch,id};if(touch)courtPress.timer=setTimeout(courtDragStart,150);
 }
 function courtDragMove(x,y){const p=courtPress;if(!p)return;if(!courtDrag){if(Math.hypot(x-p.x,y-p.y)>8){if(p.touch)courtDragClean();else courtDragStart();}}if(courtDrag)courtDragPosition(y);}
@@ -46,3 +46,13 @@ window.addEventListener('click',ev=>{if((courtDrag||Date.now()<courtDragSuppress
 
 window.addEventListener('selectstart',ev=>{if(ev.target.closest?.('.court-rank-row')&&!ev.target.closest('select,input,textarea'))ev.preventDefault();},true);
 window.addEventListener('dragstart',ev=>{if(ev.target.closest?.('.court-rank-row'))ev.preventDefault();},true);
+
+// Android can start selection after the initial hold; clear only selections
+// belonging to this ranking screen, including text-node selection targets.
+function courtClearSelection(){
+ const selection=window.getSelection?.();if(!selection||selection.isCollapsed)return;
+ const inside=node=>{const el=node?.nodeType===3?node.parentElement:node;return !!el?.closest?.('.court-ranking,.court-rank-ghost');};
+ if(inside(selection.anchorNode)||inside(selection.focusNode))selection.removeAllRanges();
+}
+window.addEventListener('selectionchange',courtClearSelection,true);
+window.addEventListener('touchstart',ev=>{if(ev.target.closest?.('[data-rank-person]'))courtClearSelection();},{capture:true,passive:true});

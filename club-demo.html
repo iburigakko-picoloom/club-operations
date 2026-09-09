@@ -323,6 +323,8 @@ body[data-screen="car"] .app{max-width:1100px}
 .court-rank-row,.court-rank-row .row-main,.court-rank-no,.court-rank-grip{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none}
 
 .wf-avatar{width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--surface)}
+
+.court-rank-name{text-align:left;align-self:stretch;cursor:grab}.court-rank-grip{align-self:stretch;cursor:grab}.court-ranking,.court-ranking *,.court-rank-ghost,.court-rank-ghost *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none}
 </style></head><body><div class="app" id="app"></div><div id="modal-root"></div><div id="toast-root" aria-live="polite"></div><script>'use strict';
 const clubSessionKey='club-operations-session-v1';
 const clubFlowKey='club-operations-line-flow-v1';
@@ -1477,7 +1479,7 @@ function renderCourtRanking(){
  const members=state.people.filter(p=>p.active!==false),ids=new Set(members.map(p=>p.id));
  if(!courtUI.rank)courtUI.rank=[...courtData().ranking.filter(id=>ids.has(id)),...members.filter(p=>!courtData().ranking.includes(p.id)).map(p=>p.id)];
  const ro=!edit('courtAssignments');
- return shell('レベル順','courts',`<p class="note">上ほどレベルが高い順。名前を長押しして移動。</p><div class="court-ranking">${courtUI.rank.map((id,i)=>`<div class="row court-rank-row" data-rank-person="${esc(id)}"><span class="court-rank-no">${i+1}</span><span class="row-main">${esc(pName(id))}</span><select data-court-rank="${esc(id)}" aria-label="${esc(pName(id))}の順位" ${ro?'disabled':''}>${courtUI.rank.map((_,j)=>`<option value="${j}" ${i===j?'selected':''}>${j+1}位</option>`).join('')}</select><span class="court-rank-grip" aria-hidden="true">⠿</span></div>`).join('')||'<p class="empty">部員を登録してください</p>'}</div>`,'courts',ro?'':action('court-rank-save','保存','','text-btn'));
+ return shell('レベル順','courts',`<p class="note">上ほどレベルが高い順。名前を長押しして移動。</p><div class="court-ranking">${courtUI.rank.map((id,i)=>`<div class="row court-rank-row" data-rank-person="${esc(id)}"><span class="court-rank-no">${i+1}</span><button type="button" class="row-main court-rank-name" data-rank-drag aria-label="${esc(pName(id))}をドラッグで移動">${esc(pName(id))}</button><select data-court-rank="${esc(id)}" aria-label="${esc(pName(id))}の順位" ${ro?'disabled':''}>${courtUI.rank.map((_,j)=>`<option value="${j}" ${i===j?'selected':''}>${j+1}位</option>`).join('')}</select><button type="button" class="court-rank-grip" data-rank-drag aria-label="${esc(pName(id))}をドラッグで移動">⠿</button></div>`).join('')||'<p class="empty">部員を登録してください</p>'}</div>`,'courts',ro?'':action('court-rank-save','保存','','text-btn'));
 }
 function courtRankRects(){return new Map([...document.querySelectorAll('[data-rank-person]')].map(el=>[el.dataset.rankPerson,el.getBoundingClientRect()]));}
 function courtRankAnimate(before,moved){if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;document.querySelectorAll('[data-rank-person]').forEach(el=>{const old=before.get(el.dataset.rankPerson),now=el.getBoundingClientRect();if(old&&el.animate){const dx=old.left-now.left,dy=old.top-now.top;if(dx||dy)el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'translate(0,0)'}],{duration:240,easing:'cubic-bezier(.2,.8,.2,1)'});if(el.dataset.rankPerson===moved)el.animate([{backgroundColor:'#dcefe0'},{backgroundColor:'#ffffff'}],{duration:650});}});}
@@ -1537,7 +1539,7 @@ function courtDragFinish(cancel=false){
  if(!cancel&&allowed&&d.to!==d.from)courtMove(d.id,d.to,before);else courtRankAnimate(before,d.id);
 }
 function courtDragPress(ev,x,y,touch,id){
- if(!courtDragAllowed()||ev.target.closest('select,input,button,a'))return;
+ if(!courtDragAllowed()||ev.target.closest('select,input,a')||(ev.target.closest('button')&&!ev.target.closest('[data-rank-drag]')))return;
  const row=ev.target.closest('[data-rank-person]');if(!row)return;courtDragClean();courtPress={row,x,y,touch,id};if(touch)courtPress.timer=setTimeout(courtDragStart,150);
 }
 function courtDragMove(x,y){const p=courtPress;if(!p)return;if(!courtDrag){if(Math.hypot(x-p.x,y-p.y)>8){if(p.touch)courtDragClean();else courtDragStart();}}if(courtDrag)courtDragPosition(y);}
@@ -1553,6 +1555,16 @@ window.addEventListener('click',ev=>{if((courtDrag||Date.now()<courtDragSuppress
 
 window.addEventListener('selectstart',ev=>{if(ev.target.closest?.('.court-rank-row')&&!ev.target.closest('select,input,textarea'))ev.preventDefault();},true);
 window.addEventListener('dragstart',ev=>{if(ev.target.closest?.('.court-rank-row'))ev.preventDefault();},true);
+
+// Android can start selection after the initial hold; clear only selections
+// belonging to this ranking screen, including text-node selection targets.
+function courtClearSelection(){
+ const selection=window.getSelection?.();if(!selection||selection.isCollapsed)return;
+ const inside=node=>{const el=node?.nodeType===3?node.parentElement:node;return !!el?.closest?.('.court-ranking,.court-rank-ghost');};
+ if(inside(selection.anchorNode)||inside(selection.focusNode))selection.removeAllRanges();
+}
+window.addEventListener('selectionchange',courtClearSelection,true);
+window.addEventListener('touchstart',ev=>{if(ev.target.closest?.('[data-rank-person]'))courtClearSelection();},{capture:true,passive:true});
 </script><script>// Personal shortcuts are scoped to this account and group on this device.
 const homeFeatures=[['出欠','attendance','people'],['配車','carpools','car'],['体育館','venues','calendar'],['コート割','courts','people'],['練習メニュー','practice','paper'],['備品','equipment','box'],['配車精算','settlement','paper']];
 function homeKey(){return 'club-home-features-v1:'+JSON.stringify([ctx.mode,state.currentUser,state.group.id]);}
