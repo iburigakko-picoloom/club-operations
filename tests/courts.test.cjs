@@ -8,16 +8,10 @@ test('four people by default; remainders and limited gyms are balanced',()=>{
 test('every participant appears exactly once, court counts and sizes hold, input stays untouched',()=>{
  for(const n of [1,3,4,7,11,16,17,22,31,48,65])for(const c of [1,2,4,6,10]){const ids=Array.from({length:n},(_,i)=>'m'+i),before=[...ids],out=D.create(ids,c,random(n+c));for(const groups of [out.level,out.balanced]){assert.ok(groups.length<=c);assert.deepEqual(groups.flat().sort(),[...ids].sort());const ns=groups.map(g=>g.length);assert.ok(Math.max(...ns)-Math.min(...ns)<=1);}assert.deepEqual(out.level.flat(),ids);assert.deepEqual(ids,before);}
 });
-test('balanced courts draw nearby partners while balancing strength and varying the draw',()=>{
+test('equal version mixes level bands and improves average-rank balance while varying the draw',()=>{
  const ids=Array.from({length:24},(_,i)=>'m'+i),rank=new Map(ids.map((id,i)=>[id,i+1])),variants=new Set();
- for(let seed=1;seed<20;seed++){const out=D.create(ids,6,random(seed));assert.ok(D.meanSpread(out.balanced,rank)<D.meanSpread(out.level,rank));for(const group of out.balanced)for(const id of group)assert.ok(group.some(other=>other!==id&&Math.abs(rank.get(other)-rank.get(id))<=4));variants.add(JSON.stringify(out.balanced));}assert.ok(variants.size>5);
+ for(let seed=1;seed<12;seed++){const out=D.create(ids,6,random(seed));assert.ok(D.meanSpread(out.balanced,rank)<D.meanSpread(out.level,rank));assert.ok(D.meanSpread(out.balanced,rank)<=2);for(const group of out.balanced)assert.deepEqual(group.map(id=>Math.floor(rank.get(id)-1)/6|0).sort(),[0,1,2,3]);variants.add(JSON.stringify(out.balanced));}assert.ok(variants.size>5);
 });
-test('odd and crowded courts give every member a nearby peer, with no isolated extra player',()=>{
- for(const [n,c] of [[17,4],[19,4],[22,4],[7,3],[11,3],[31,6],[65,4]])for(let seed=1;seed<=20;seed++){
- const ids=Array.from({length:n},(_,i)=>i),out=D.create(ids,c,random(seed*7919));assert.deepEqual(out.balanced.flat().sort((a,b)=>a-b),ids);for(const group of out.balanced)for(const id of group)assert.ok(group.some(other=>other!==id&&Math.abs(other-id)<=4),`${n}/${c}: isolated ${id}`);
- }
-});
-
 function harness(){
  const listeners={},state={group:{id:'g'},people:Array.from({length:9},(_,i)=>({id:'m'+i,name:'部員'+i,active:true})),events:[{id:'e',date:'2026-09-10',title:'練習',kind:'club'}],venues:[{id:'v',name:'体育館',courts:2}],attendance:{},training:{unchanged:true},plans:[{unchanged:true}]};let saved='',route=['courts'];
  const c={state,CourtDomain:D,document:{querySelectorAll:()=>[]},ctx:{ready:false,busy:false,user:{}},window:{addEventListener:(k,f)=>(listeners[k]||=[]).push(f),scrollY:0,scrollTo:()=>{}},renderOperations:()=>'',wfRenderRoute:()=>c.ctx.user?null:'LOGIN',render:()=>{},entry:()=>'',getRoute:()=>route,edit:()=>true,esc:String,jpDate:String,DEMO_TODAY:'2026-09-09',event:id=>c.state.events.find(e=>e.id===id),eventVenue:()=>c.state.venues[0],participants:()=>c.state.people.filter(p=>p.active&&c.state.attendance[p.id]!==false),clubEvents:()=>c.state.events,pName:id=>c.state.people.find(p=>p.id===id)?.name,shell:(a,b,html)=>html,action:(a,label,attrs='')=>`<button data-act="${a}" ${attrs}>${label}</button>`,segments:()=>'',actHandled:()=>{},toast:()=>{},go:r=>route=[r],wfSave:async fn=>{fn();saved=JSON.stringify(c.state);}};
@@ -46,5 +40,3 @@ test('ranking prevents native text selection and drag while preserving rank inpu
 test('ranking clears delayed text-node selection without affecting other screens',()=>{const t=dragHarness();let cleared=0;const selection={isCollapsed:false,anchorNode:{nodeType:3,parentElement:{closest:()=>({})}},focusNode:null,removeAllRanges:()=>cleared++};t.c.window.getSelection=()=>selection;t.fire('selectionchange');assert.equal(cleared,1);selection.anchorNode.parentElement.closest=()=>null;t.fire('selectionchange');assert.equal(cleared,1);const e=t.event();e.target.closest=q=>q==='[data-rank-person]'?t.rows[0]:q==='button'||q==='[data-rank-drag]'?{}:null;t.fire('touchstart',e);t.hold();assert.equal(t.active(),true);});
 
 test('five-person courts are randomly positioned while level order stays intact',()=>{const ids=Array.from({length:17},(_,i)=>'m'+i),positions=new Set();for(let seed=1;seed<=100;seed++){const {level}=D.create(ids,4,random(seed*7919));positions.add(level.findIndex(g=>g.length===5));assert.deepEqual(level.flat(),ids);assert.deepEqual(level.map(g=>g.length).sort(),[4,4,4,5]);}assert.equal(positions.size,4);});
-
-test('nearby partners vary without consulting history or separating the strongest member',()=>{const ids=Array.from({length:24},(_,i)=>i),partners=new Set();let withoutFormerPartner=0;for(let seed=1;seed<=80;seed++){const group=D.create(ids,6,random(seed*7919)).balanced.find(g=>g.includes(0));for(const id of group)if(id>0&&id<=4)partners.add(id);if(!group.includes(1))withoutFormerPartner++;}assert.equal(partners.size,4);assert.ok(withoutFormerPartner>=10);});

@@ -8,40 +8,23 @@ function sizes(n,courts){
 }
 function shuffle(a,rng){for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function meanSpread(groups,rank){const means=groups.map(g=>g.reduce((a,id)=>a+rank.get(id),0)/g.length);return Math.max(...means)-Math.min(...means);}
-// Draw without replacement: square-root weighting mildly favors nearer ranks.
-function weightedNeighbor(pool,anchor,rank,rng){
- const options=pool.map((id,i)=>({id,i,gap:Math.abs(rank.get(id)-rank.get(anchor))})).filter(x=>x.gap<=4);
- if(!options.length)return -1;
- let draw=rng()*options.reduce((sum,x)=>sum+1/Math.sqrt(x.gap),0);
- for(const option of options){draw-=1/Math.sqrt(option.gap);if(draw<0)return option.i;}
- return options[options.length-1].i;
-}
 function create(ids,courts,rng=Math.random){
  if(new Set(ids).size!==ids.length)throw Error('参加者が重複しています');
  const capacities=shuffle(sizes(ids.length,courts),rng),level=[];let offset=0;
  for(const n of capacities){level.push(ids.slice(offset,offset+n));offset+=n;}
  if(!ids.length)return {level:[],balanced:[]};
- const rank=new Map(ids.map((id,i)=>[id,i+1]));
- // Odd courts use a nearby triple; remaining slots are nearby pairs.
- // Keep units intact when dealing them into courts.
- const slots=capacities.map(n=>{const units=[];if(n%2){units.push(n===1?1:3);n-=units[0];}while(n>0){units.push(2);n-=2;}return units;});
- const candidates=[];let bestScore=Infinity;
+ const rank=new Map(ids.map((id,i)=>[id,i+1]));let best=null,bestScore=Infinity;
+ // Each band contributes at most one person per court; compare many random deals.
  for(let trial=0;trial<300;trial++){
-  const unitSizes=shuffle(slots.flat(),rng),units={1:[],2:[],3:[]},pool=[...ids];let valid=true;
-  for(const size of unitSizes){
-   const anchor=pool.shift(),unit=[anchor];
-   while(unit.length<size){const index=trial===0?0:weightedNeighbor(pool,anchor,rank,rng);if(index<0){valid=false;break;}unit.push(pool.splice(index,1)[0]);}
-   if(!valid)break;units[size].push(unit);
+  const groups=capacities.map(()=>[]);let cursor=0;
+  for(let row=0;cursor<ids.length;row++){
+   const targets=shuffle(capacities.map((n,i)=>n>row?i:-1).filter(i=>i>=0),rng);
+   for(const i of targets)groups[i].push(ids[cursor++]);
   }
-  // Skip draws that strand a distant final member; never force a bad pairing.
-  // The initial adjacent draw is a guaranteed valid fallback.
-  if(!valid)continue;
-  for(const size of [1,2,3])shuffle(units[size],rng);
-  const groups=slots.map(court=>court.flatMap(size=>units[size].pop()));
-  const score=meanSpread(groups,rank);bestScore=Math.min(bestScore,score);candidates.push({groups,score});
+  const score=meanSpread(groups,rank);
+  if(score<bestScore||score===bestScore&&rng()<.5){best=groups;bestScore=score;}
  }
- // Keep a little variation instead of always pairing the strongest with the weakest.
- const close=candidates.filter(x=>x.score<=bestScore+1.5),best=close[Math.floor(rng()*close.length)].groups;
+ // Court labels should not permanently favor one group size or level band.
  return {level,balanced:shuffle(best,rng).map(g=>g.sort((a,b)=>rank.get(a)-rank.get(b)))};
 }
 const api={sizes,create,meanSpread};root.CourtDomain=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
