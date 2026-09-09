@@ -128,8 +128,10 @@ def test_inventory_nonnegative(env):
 
 def test_saved_training_snapshot(env):
  u=account(env);s=populate(env,u,create(env,u));tr={'categories':[{'id':'cat','name':'基礎'}],'menus':[{'id':'m','categoryId':'cat','name':'ノック','seconds':120,'requiresSets':True}],'sheets':[{'id':'sh','title':'練習','eventId':'e','patterns':[4,5],'rows':[{'name':'ノック','seconds':120,'requiresSets':True,'sets':{'4':1,'5':2}}]}]}
+ tr['sheets'][0]['showImageTime']=False
  r=patch(env,u,s,{'training':tr});assert r.status_code==200;s=r.json();tr['menus'][0]['seconds']=300
  r=patch(env,u,s,{'training':tr});assert r.status_code==200;assert r.json()['training']['sheets'][0]['rows'][0]['seconds']==120
+ assert get(env,s['group']['id'])['training']['sheets'][0]['showImageTime'] is False
 
 def test_push_rejects_ssrf(env):
  u=account(env)

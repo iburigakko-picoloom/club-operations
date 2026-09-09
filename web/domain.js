@@ -43,7 +43,7 @@ function trainingTotals(rows,patterns=[4,5]){
  }
  for(const p of pats)totals[p].seconds+=fixed;
  // `seconds` is kept as a compatibility field for older callers. The UI must show each pattern's own time.
- const basis=pats.length?Math.max(...pats):null;return {patterns:pats,totals,basis,seconds:basis?totals[basis].seconds:fixed,fixed,mismatch:mismatchMenus.length>0,mismatchMenus};
+ const basis=pats.length?Math.max(...pats):null;return {patterns:pats,totals,basis,seconds:basis?totals[basis].seconds:fixed,fixed,mismatch:pats.length>1&&pats.some(p=>totals[p].peopleSets!==totals[pats[0]].peopleSets),mismatchMenus};
 }
 function planPeople(car){return [car.driver,...(car.riders||[])].filter(Boolean);}
 function participating(s,eid,mid){const p=s.people.find(p=>p.id===mid);return Boolean(p&&p.active!==false&&(s.attendance[eid+'|'+mid]??defaultAttendance(p)));}
