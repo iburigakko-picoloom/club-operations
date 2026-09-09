@@ -1477,12 +1477,12 @@ function sizes(n,courts){
 }
 function shuffle(a,rng){for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function meanSpread(groups,rank){const means=groups.map(g=>g.reduce((a,id)=>a+rank.get(id),0)/g.length);return Math.max(...means)-Math.min(...means);}
-// Draw without replacement: nearer ranks have larger weights.
+// Draw without replacement: square-root weighting mildly favors nearer ranks.
 function weightedNeighbor(pool,anchor,rank,rng){
  const options=pool.map((id,i)=>({id,i,gap:Math.abs(rank.get(id)-rank.get(anchor))})).filter(x=>x.gap<=4);
  if(!options.length)return -1;
- let draw=rng()*options.reduce((sum,x)=>sum+1/x.gap,0);
- for(const option of options){draw-=1/option.gap;if(draw<0)return option.i;}
+ let draw=rng()*options.reduce((sum,x)=>sum+1/Math.sqrt(x.gap),0);
+ for(const option of options){draw-=1/Math.sqrt(option.gap);if(draw<0)return option.i;}
  return options[options.length-1].i;
 }
 function create(ids,courts,rng=Math.random){
