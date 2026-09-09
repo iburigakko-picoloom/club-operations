@@ -61,7 +61,7 @@ window.addEventListener('submit',ev=>{
  const fd=new FormData(f),get=n=>String(fd.get(n)||'').trim();
  try{
   if(form==='cal-month'){const value=get('month');if(!D.validDate(value+'-01'))throw Error('年月を確認してください');ui.calendarYear=Number(value.slice(0,4));ui.calendarMonth=Number(value.slice(5))-1;closeModal();render();return;}
-  if(form==='cal-self'){if(!edit('tasks'))throw Error('編集権限がありません');const dates=get('date')?[get('date')]:fd.getAll('selectedDate');if(!dates.length||dates.some(d=>!D.validDate(d))||!D.validTime(get('time'))||!get('title'))throw Error('名前・日程を確認してください');checkpoint();for(const date of [...new Set(dates)])state.tasks.push({id:UID(),title:get('title'),date,time:get('time'),assignees:[state.currentUser],memo:get('memo'),notifications:fd.getAll('notify'),done:false,assignmentNeedsReview:false});calCommit();return;}
+  if(form==='cal-self'){if(!edit('tasks'))throw Error('編集権限がありません');const dates=get('date')?[get('date')]:fd.getAll('selectedDate');if(!dates.length||dates.some(d=>!D.validDate(d))||!D.validTime(get('time'))||!get('title'))throw Error('名前・日程を確認してください');checkpoint();for(const date of [...new Set(dates)])state.tasks.push({id:UID(),title:get('title'),date,time:get('time'),assignees:[state.currentUser],memo:get('memo'),notifications:fd.getAll('notify'),done:false,assignmentNeedsReview:false});taskSaveMotion(f);calCommit();return;}
   if(!edit('events'))throw Error('編集権限がありません');
   if(form==='cal-color'){checkpoint();calTargets().forEach(e=>e.colorId=get('colorId'));calCommit();return;}
   const old=event(f.dataset.id),mode=f.dataset.mode,selected=fd.getAll('selectedDate'),date=mode==='multiple'?selected[0]:get('date'),endDate=mode==='period'?get('endDate'):date,start=get('start'),end=get('end');
