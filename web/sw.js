@@ -1,4 +1,4 @@
-const CACHE='club-ops-shell-v45';
+const CACHE='club-ops-shell-v46';
 const SHELL=['./','./index.html','./hosting.js','./transport.js','./styles.css','./domain.js','./base.js','./app.js','./workflow.js','./calendar.js','./experience.js','./operations.js','./court-domain.js','./courts.js','./court-drag.js','./icon.svg','./icon-192.png','./icon-512.png','./manifest.webmanifest'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL))));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('club-ops-shell-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
