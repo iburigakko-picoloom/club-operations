@@ -9,3 +9,17 @@ function setup(){let route='home';const listeners={},texts=[];
 test('home detail and nested editor return to their actual entry screens',()=>{const t=setup();t.c.window.scrollY=0;t.click('task/t');t.route('task/t');assert.equal(t.run("header('task','tasks').back"),'home');t.click('task-edit/t');t.route('task-edit/t');assert.equal(t.run("header('edit','tasks').back"),'task/t');t.click('task/t',true);t.route('task/t');assert.equal(t.run("header('task','tasks').back"),'home');});
 test('unallocated passengers are excluded from a landscape image',()=>{const t=setup(),cv=t.run("drawCarCanvas('p')");assert.ok(cv.width>cv.height);assert.ok(!t.texts.includes('未配車A'));assert.ok(!t.texts.includes('未配車B'));});
 test('driverless cars show their passengers without claiming an assigned driver',()=>{const t=setup();t.c.tableParts=()=>[{label:'大学配車',legLabel:'往復',cars:[{driver:null,riders:['同乗者']}]}];const cv=t.run("drawCarCanvas('p')");assert.ok(cv.width>cv.height);assert.ok(t.texts.includes('運転者未定'));assert.ok(t.texts.includes('同乗者'));});
+
+test('home customization persists per account and group and retains authentication guard',()=>{
+ const data=new Map(),events={};let route='';const c={ctx:{ready:false,mode:'server'},state:{currentUser:'u1',group:{id:'g1'}},ui:{taskTab:'all'},localStorage:{getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)},renderHome:()=>'<main></main>',renderOperations:()=>'<main></main>',wfRenderRoute:()=>null,entry:(name,id)=>`<a href="#${id}">${name}</a>`,shell:(title,nav,body)=>body,window:{addEventListener:(k,f)=>events[k]=f},render:()=>{},go:r=>route=r,toast:()=>{}};
+ vm.createContext(c);vm.runInContext(fs.readFileSync('web/home.js','utf8'),c);
+ events.submit({target:{matches:()=>true,querySelectorAll:()=>[{value:'courts'},{value:'practice'}]},preventDefault(){},stopImmediatePropagation(){}});
+ assert.equal(route,'home');assert.match(c.renderHome(),/#courts/);assert.match(c.renderHome(),/#practice/);assert.doesNotMatch(c.renderHome(),/#equipment/);
+ c.state.currentUser='u2';assert.doesNotMatch(c.renderHome(),/#courts/);c.state.currentUser='u1';c.state.group.id='g2';assert.doesNotMatch(c.renderHome(),/#courts/);c.state.group.id='g1';assert.match(c.wfRenderRoute('home-customize'),/checked/);
+ events.click({target:{closest:()=>true}});assert.equal(c.ui.taskTab,'self');
+});
+test('home tasks show the first three and link to the remaining tasks',()=>{
+ const source=fs.readFileSync('web/app.js','utf8').split('\n').find(l=>l.startsWith('renderHome=function'));
+ const tasks=Array.from({length:5},(_,i)=>({id:'t'+i,date:'2026-09-0'+(5-i),time:'09:00'}));
+ const c={state:{group:{name:'club'},notices:[]},operationalTasks:()=>tasks,ownTask:()=>true,noticeVisible:()=>true,shell:(a,b,html)=>html,taskRow:t=>`[${t.id}]`,action:()=>'',icon:()=>'',esc:x=>x};vm.createContext(c);vm.runInContext(source,c);const html=c.renderHome();assert.match(html,/残り2件/);assert.match(html,/\[t4\]\[t3\]\[t2\]/);assert.doesNotMatch(html,/\[t1\]|\[t0\]/);
+});
