@@ -37,3 +37,21 @@ test('court allocation permission, input validation and snapshots survive unrela
  saved.roles['コート割']=['viewer'];const newRank=structuredClone(data);newRank.ranking.reverse();assert.deepEqual(update(saved,{courtAssignments:newRank},viewer).courtAssignments.ranking,newRank.ranking);
  assert.deepEqual(update(saved,{attendance:{...saved.attendance,'e|m0':false}}).courtAssignments,data);
 });
+
+test('LINE profile image accepts only the HTTPS LINE image host',async()=>{const {linePicture}=await import('../supabase/functions/club-api/api.mjs');assert.equal(linePicture('https://profile.line-scdn.net/example'),'https://profile.line-scdn.net/example');for(const value of [undefined,'javascript:alert(1)','https://evil.example/x','https://profile.line-scdn.net.evil.example/x','http://profile.line-scdn.net/x','https://user@profile.line-scdn.net/x'])assert.equal(linePicture(value),'');});
+
+test('verified LINE image persists and is returned after session reload',async()=>{
+ const {createApi,digest}=await import('../supabase/functions/club-api/api.mjs');let picture='';const uid='line-user',user={id:uid,name:'User',email:'user@line.invalid',csrf:'csrf'},flow={expires:Date.now()/1000+600,cookie_hash:digest('b'.repeat(64)),nonce:'nonce',verifier:'verifier'};
+ const db={unsafe:async(q,p)=>{
+  if(q.startsWith('SELECT * FROM club.login_flows'))return [flow];
+  if(q.startsWith('SELECT user_id FROM club.identities'))return [{user_id:uid}];
+  if(q.startsWith('INSERT INTO club.line_profiles')){picture=p[1];return [];}
+  if(q.startsWith('SELECT * FROM club.users')||q.startsWith('SELECT u.id,u.email'))return [user];
+  if(q.startsWith('SELECT 1 FROM club.identities'))return [{exists:1}];
+  if(q.startsWith('SELECT picture'))return [{picture}];
+  return [];
+ }};
+ const api=createApi({transaction:fn=>fn(db),lineConfig:()=>({enabled:true,channel:'123'}),exchangeLine:async()=>({sub:'subject',picture:'https://profile.line-scdn.net/avatar'})});
+ const response=await api(new Request('https://app.test/auth/line/exchange',{method:'POST',body:JSON.stringify({state:'state',browserSecret:'b'.repeat(64),code:'code'})}));assert.equal(response.status,200);const login=await response.json();assert.equal(login.user.picture,'https://profile.line-scdn.net/avatar');
+ const session=await api(new Request('https://app.test/session',{headers:{authorization:'Bearer '+login.token}}));assert.equal(session.status,200);assert.equal((await session.json()).user.picture,picture);
+});

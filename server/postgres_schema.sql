@@ -22,6 +22,7 @@ ALTER TABLE club.jobs ADD COLUMN IF NOT EXISTS claimed_at DOUBLE PRECISION NOT N
 CREATE TABLE IF NOT EXISTS club.push_deliveries(job_id TEXT NOT NULL,subscription_id TEXT NOT NULL,PRIMARY KEY(job_id,subscription_id));
 CREATE TABLE IF NOT EXISTS club.push_config(id INTEGER PRIMARY KEY CHECK(id=1),public_key TEXT NOT NULL,private_key TEXT NOT NULL,worker_token TEXT NOT NULL,enabled BOOLEAN NOT NULL DEFAULT FALSE);
 CREATE TABLE IF NOT EXISTS club.identities(provider TEXT NOT NULL,channel TEXT NOT NULL,subject TEXT NOT NULL,user_id TEXT NOT NULL,created_at DOUBLE PRECISION NOT NULL,PRIMARY KEY(provider,channel,subject),UNIQUE(provider,channel,user_id));
+CREATE TABLE IF NOT EXISTS club.line_profiles(user_id TEXT PRIMARY KEY REFERENCES club.users(id) ON DELETE CASCADE,picture TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS club.login_flows(state_hash TEXT PRIMARY KEY,cookie_hash TEXT NOT NULL,nonce TEXT NOT NULL,verifier TEXT NOT NULL,link_user_id TEXT,expires DOUBLE PRECISION NOT NULL);
 CREATE TABLE IF NOT EXISTS club.login_limits(client_hash TEXT PRIMARY KEY,window_start DOUBLE PRECISION NOT NULL,attempts INTEGER NOT NULL);
 

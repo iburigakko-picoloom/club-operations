@@ -6,6 +6,7 @@ export const random=(n=32)=>randomBytes(n).toString('hex');
 const sec=()=>Date.now()/1000;
 export const safeEqual=(a,b)=>{if(typeof a!=='string'||typeof b!=='string')return false;const aa=new TextEncoder().encode(a),bb=new TextEncoder().encode(b);return aa.length===bb.length&&timingSafeEqual(aa,bb);};
 function hashPassword(password,salt=random(16)){return salt+':'+scryptSync(password,salt,64,{N:16384,r:8,p:1}).toString('hex');}
+export function linePicture(value){try{const u=new URL(value);return u.protocol==='https:'&&u.hostname==='profile.line-scdn.net'&&!u.username&&!u.password&&!u.port&&value.length<=2048?u.href:'';}catch{return '';}}
 export const APP_URL='https://iburigakko-picoloom.github.io/club-operations/';
 export const APP_ORIGIN=new URL(APP_URL).origin;
 
@@ -16,9 +17,9 @@ export function createApi({transaction,lineConfig=()=>({enabled:false}),exchange
  async function member(c,gid,uid){const [g]=await query(c,'SELECT g.* FROM club.groups g JOIN club.memberships m ON m.group_id=g.id WHERE g.id=$1 AND m.user_id=$2',[gid,uid]);if(!g)fail('このグループにはアクセスできません',403);return g;}
  const bearer=req=>req.headers.get('authorization')?.match(/^Bearer ([a-f0-9]{64})$/i)?.[1]||'';
  async function userFor(c,req,mutate=false){const token=bearer(req);if(!token)fail('ログインしてください',401);const [u]=await query(c,'SELECT u.id,u.email,u.name,s.csrf FROM club.sessions s JOIN club.users u ON u.id=s.user_id WHERE s.token=$1 AND s.expires>$2',[digest(token),sec()]);if(!u)fail('ログインしてください',401);if(mutate&&!safeEqual(req.headers.get('x-csrf-token')||'',u.csrf))fail('画面を再読み込みしてください',403);return u;}
- async function publicUser(c,u){const linked=await query(c,"SELECT 1 FROM club.identities WHERE provider='line' AND user_id=$1",[u.id]);return {id:u.id,name:u.name,email:u.email.endsWith('@line.invalid')?'':u.email,lineLinked:!!linked.length};}
+ async function publicUser(c,u){const linked=await query(c,"SELECT 1 FROM club.identities WHERE provider='line' AND user_id=$1",[u.id]);const [profile]=await query(c,'SELECT picture FROM club.line_profiles WHERE user_id=$1',[u.id]);return {picture:profile?.picture||'',id:u.id,name:u.name,email:u.email.endsWith('@line.invalid')?'':u.email,lineLinked:!!linked.length};}
  async function issue(c,u){const token=random(),csrf=random(24);await query(c,'DELETE FROM club.sessions WHERE expires<$1',[sec()]);await query(c,'INSERT INTO club.sessions VALUES($1,$2,$3,$4)',[digest(token),u.id,csrf,sec()+86400*14]);return {user:await publicUser(c,u),csrf,token};}
- async function view(c,g,u){const s=JSON.parse(g.data);s.operators=await query(c,'SELECT u.id,u.name FROM club.memberships m JOIN club.users u ON u.id=m.user_id WHERE m.group_id=$1 ORDER BY u.name',[g.id]);s.currentUser=u.id;s.ownerId=g.owner_id;s.version=g.version;if(u.id!==g.owner_id)s.notices=s.notices.filter(n=>targeted(s,n,u.id));return s;}
+ async function view(c,g,u){const s=JSON.parse(g.data);s.operators=await query(c,"SELECT u.id,u.name,COALESCE(p.picture,'') AS picture FROM club.memberships m JOIN club.users u ON u.id=m.user_id LEFT JOIN club.line_profiles p ON p.user_id=u.id WHERE m.group_id=$1 ORDER BY u.name",[g.id]);s.currentUser=u.id;s.ownerId=g.owner_id;s.version=g.version;if(u.id!==g.owner_id)s.notices=s.notices.filter(n=>targeted(s,n,u.id));return s;}
  async function limit(key,max=12,window=300){return transaction(async c=>{await query(c,'DELETE FROM club.login_limits WHERE window_start<$1',[sec()-600]);const hash=digest(key);const [r]=await query(c,'SELECT * FROM club.login_limits WHERE client_hash=$1',[hash]);if(r&&r.window_start>sec()-window&&r.attempts>=max)fail('少し待ってから再試行してください',429);await query(c,'INSERT INTO club.login_limits VALUES($1,$2,1) ON CONFLICT(client_hash) DO UPDATE SET attempts=CASE WHEN club.login_limits.window_start<$3 THEN 1 ELSE club.login_limits.attempts+1 END,window_start=CASE WHEN club.login_limits.window_start<$3 THEN $2 ELSE club.login_limits.window_start END',[hash,sec(),sec()-window]);});}
  async function readBody(req){if(Number(req.headers.get('content-length'))>4000000)fail('データが大きすぎます',413);const reader=req.body?.getReader();if(!reader)return {};let size=0;const chunks=[];while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>4000000){await reader.cancel();fail('データが大きすぎます',413);}chunks.push(value);}const bytes=new Uint8Array(size);let offset=0;for(const v of chunks){bytes.set(v,offset);offset+=v.length;}try{const b=JSON.parse(new TextDecoder().decode(bytes)||'{}');if(!object(b))fail('JSONを確認してください');return b;}catch{fail('JSONを確認してください');}}
  async function route(req,path,b){
@@ -38,7 +39,7 @@ export function createApi({transaction,lineConfig=()=>({enabled:false}),exchange
   if((path==='/auth/line/start'||path==='/auth/line/link')&&method==='POST'){
    if(!cfg.enabled)fail('LINEログインは接続設定前です',503);if(typeof b.browserSecret!=='string'||!/^[a-f0-9]{64}$/.test(b.browserSecret))fail('ログインをもう一度開始してください');
    await limit('line:global',100,600);
-   return transaction(async c=>{let uid=null;if(path.endsWith('/link')){const u=await userFor(c,req,true);uid=u.id;const rows=await query(c,"SELECT 1 FROM club.identities WHERE provider='line' AND user_id=$1",[uid]);if(rows.length)fail('すでにLINE連携済みです',409);}
+   return transaction(async c=>{let uid=null;if(path.endsWith('/link')){const u=await userFor(c,req,true);uid=u.id;const rows=await query(c,"SELECT 1 FROM club.identities WHERE provider='line' AND user_id=$1",[uid]);}
     const state=random(),nonce=random(),verifier=random(32);await query(c,'DELETE FROM club.login_flows WHERE expires<$1 OR cookie_hash=$2',[sec(),digest(b.browserSecret)]);await query(c,'INSERT INTO club.login_flows VALUES($1,$2,$3,$4,$5,$6)',[digest(state),digest(b.browserSecret),nonce,verifier,uid,sec()+600]);
     const params=new URLSearchParams({response_type:'code',client_id:cfg.channel,redirect_uri:appUrl,state,scope:'openid profile',nonce,code_challenge:createHash('sha256').update(verifier).digest('base64url'),code_challenge_method:'S256'});return {state,authorizeUrl:'https://access.line.me/oauth2/v2.1/authorize?'+params};
    });
@@ -52,7 +53,7 @@ export function createApi({transaction,lineConfig=()=>({enabled:false}),exchange
     if(uid){if(existing&&existing.user_id!==uid)fail('このLINEは別のアカウントと連携済みです',409);const [other]=await query(c,"SELECT subject FROM club.identities WHERE provider='line' AND channel=$1 AND user_id=$2",[cfg.channel,uid]);if(other&&other.subject!==claims.sub)fail('すでに別のLINEと連携済みです',409);await userFor(c,req,true);}
     else if(existing)uid=existing.user_id;
     else{uid=random(16);const email='line-'+digest(cfg.channel+'|'+claims.sub)+'@line.invalid',name=String(claims.name||'運営メンバー').trim().slice(0,80)||'運営メンバー';await query(c,'INSERT INTO club.users VALUES($1,$2,$3,$4)',[uid,email,name,'!line-only']);}
-    await query(c,"INSERT INTO club.identities VALUES('line',$1,$2,$3,$4) ON CONFLICT DO NOTHING",[cfg.channel,claims.sub,uid,sec()]);const [u]=await query(c,'SELECT * FROM club.users WHERE id=$1',[uid]);return {...await issue(c,u),linked:!!flow.link_user_id};
+    await query(c,"INSERT INTO club.identities VALUES('line',$1,$2,$3,$4) ON CONFLICT DO NOTHING",[cfg.channel,claims.sub,uid,sec()]);await query(c,'INSERT INTO club.line_profiles(user_id,picture) VALUES($1,$2) ON CONFLICT(user_id) DO UPDATE SET picture=EXCLUDED.picture',[uid,linePicture(claims.picture)]);const [u]=await query(c,'SELECT * FROM club.users WHERE id=$1',[uid]);return {...await issue(c,u),linked:!!flow.link_user_id};
    });
   }
   return transaction(async c=>{
