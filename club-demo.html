@@ -1484,10 +1484,13 @@ function allocationScore(groups,n){
   if(ranks.length<2)continue;
   for(let i=0;i<ranks.length;i++){const gap=Math.min(i?ranks[i]-ranks[i-1]:Infinity,i+1<ranks.length?ranks[i+1]-ranks[i]:Infinity);if(gap>4)isolated++;}
   const largest=Math.max(...ranks.slice(1).map((r,i)=>r-ranks[i]));
-  penalty+=Math.pow(Math.max(0,largest-Math.max(4,n*.22))/n,2)*8;
-  penalty+=Math.pow(Math.max(0,ranks[ranks.length-1]-ranks[0]-n*.65)/n,2)*2;
+  penalty+=Math.pow(Math.max(0,largest-Math.max(4,n*.28))/n,2)*8;
+  const spread=ranks[ranks.length-1]-ranks[0];
+  // Discourage courts made entirely from a narrow rank band.
+  penalty+=Math.pow(Math.max(0,n*.36-spread)/n,2)*6;
+  penalty+=Math.pow(Math.max(0,spread-n*.8)/n,2)*2;
  }
- penalty+=Math.pow(Math.max(0,Math.max(...means)-Math.min(...means)-n*.32)/n,2)*12;
+ penalty+=Math.pow(Math.max(0,Math.max(...means)-Math.min(...means)-n*.27)/n,2)*14;
  return {isolated,penalty,total:isolated*5+penalty};
 }
 function mixedCourts(capacities,n,rng){
