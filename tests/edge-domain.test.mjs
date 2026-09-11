@@ -6,6 +6,17 @@ const owner={id:'owner',name:'オーナー'},viewer={id:'viewer',name:'閲覧者
 function populated(){const s=emptyState('g','部活');s.people=Array.from({length:4},(_,i)=>({id:'m'+i,name:'部員'+i,grade:3,seniority:'below',pickup:'university',active:true,defaultOverride:null}));s.events=[{id:'e',title:'練習',kind:'club',date:today(),start:'19:00',end:'21:00',assignees:[]}];seedAttendance(s);return s;}
 function plan(){const cars=[{id:'c',pickup:'university',driver:'m0',riders:['m1','m2','m3']}];return {id:'p',eventId:'e',linked:true,enabled:{outbound:true,return:true},need:{outbound:{},return:{}},legs:{outbound:cars,return:structuredClone(cars)},unitYen:300,status:'draft'};}
 const update=(s,c,u=owner)=>updateState(s,c,u,'owner','g',ops);
+test('attendance-only role removes absent riders and drivers on both legs without touching other data',()=>{
+ const s=populated();s.attendance['e|m0']=true;s.plans=[plan()];s.roles['出欠']=['viewer'];s.plans[0].linked=false;
+ const attendance={...s.attendance,'e|m0':false,'e|m1':false};const next=update(s,{attendance},viewer);
+ for(const leg of ['outbound','return']){assert.equal(next.plans[0].legs[leg][0].driver,null);assert.deepEqual(next.plans[0].legs[leg][0].riders,['m2','m3']);}
+ assert.equal(next.plans[0].status,'draft');assert.deepEqual(next.training,s.training);assert.equal(s.plans[0].legs.outbound[0].driver,'m0');
+ const again=update(next,{attendance:{...attendance,'e|m1':true}},viewer);assert.deepEqual(again.plans,next.plans);
+ assert.throws(()=>update(s,{attendance},{id:'outsider'}),e=>e.status===403);
+});
+test('attendance changes preserve finalized carpool snapshots',()=>{
+ const s=populated();s.plans=[plan()];s.settlements=[{id:'snap',locked:true,planIds:['p']}];const next=update(s,{attendance:{...s.attendance,'e|m1':false}});assert.deepEqual(next.plans,s.plans);assert.deepEqual(next.settlements,s.settlements);
+});
 test('valid state, attendance defaults and manual values',()=>{const s=populated();validate(s,ops);assert.equal(s.attendance['e|m0'],true);s.attendance['e|m0']=false;seedAttendance(s);assert.equal(s.attendance['e|m0'],false);});
 test('attendance month-end horizon and far dates',()=>{const s=populated();s.attendance={};s.events[0].date='2026-05-01';seedAttendance(s,'2026-01-31');assert.deepEqual(s.attendance,{});s.events[0].date='2026-04-30';seedAttendance(s,'2026-01-31');assert.equal(s.attendance['e|m0'],true);});
 test('owner and module assignment required; owner cannot be supplied',()=>{const s=populated();assert.throws(()=>update(s,{people:[]},viewer),e=>e.status===403);assert.throws(()=>update(s,{roles:{}},viewer),e=>e.status===403);assert.throws(()=>update(s,{ownerId:'viewer'}));assert.throws(()=>update(s,{group:{id:'other',name:'x'}}),e=>e.status===403);s.roles['備品']=['viewer'];assert.equal(update(s,{equipment:[{id:'q',name:'ボール',quantity:2,unit:'個',threshold:null}]},viewer).equipment.length,1);});

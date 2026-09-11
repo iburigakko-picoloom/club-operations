@@ -411,6 +411,21 @@ async def update_state(gid:str,req:Request):
             prior=prior_plans.get(p['id'])
             if p['id'] in locked and p!=prior:fail('精算確定済みです。先に月の確定を解除してください',409)
             if p!=prior and p['status']=='registered':validate_registered(s,p)
+        if 'attendance' in changes:
+            affected={e['id'] for e in s['events'] if any(k.startswith(e['id']+'|') and v!=old['attendance'].get(k) for k,v in s['attendance'].items())}
+            members={m['id']:m for m in s['people']}
+            def participating(eid,mid):
+                m=members.get(mid)
+                return bool(m and m.get('active',True) and s['attendance'].get(eid+'|'+mid,m.get('defaultOverride') if m.get('defaultOverride') is not None else m['seniority']=='below'))
+            for p in s['plans']:
+                if p['eventId'] not in affected or p['id'] in locked:continue
+                changed=False
+                for leg in ('outbound','return'):
+                    for car in p['legs'][leg]:
+                        if car.get('driver') and not participating(p['eventId'],car['driver']):car['driver']=None;changed=True
+                        riders=[mid for mid in car['riders'] if participating(p['eventId'],mid)]
+                        if len(riders)!=len(car['riders']):car['riders']=riders;changed=True
+                if changed:p['status']='draft';p['version']=p.get('version',0)+1
         old_events={x['id']:x for x in old['events']}
         for p in old['plans']:
             if p['id'] in locked:

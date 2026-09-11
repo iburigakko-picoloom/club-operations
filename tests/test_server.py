@@ -28,6 +28,16 @@ def make_plan():
  cars=[{'id':'c','pickup':'university','driver':'m0','riders':['m1','m2','m3']}]
  return {'id':'p','eventId':'e','linked':True,'legs':{'outbound':cars,'return':copy.deepcopy(cars)},'enabled':{'outbound':True,'return':True},'need':{'outbound':{},'return':{}},'status':'draft','version':1,'unitYen':300}
 
+def test_attendance_removes_assigned_people_and_survives_reload(env):
+ u=account(env);s=populate(env,u,create(env,u));s=patch(env,u,s,{'plans':[make_plan()]}).json()
+ original=copy.deepcopy(s['training']);attendance={**s['attendance'],'e|m0':False,'e|m1':False}
+ r=patch(env,u,s,{'attendance':attendance});assert r.status_code==200,r.text
+ loaded=get(env,s['group']['id']);assert loaded['training']==original
+ for leg in ('outbound','return'):
+  car=loaded['plans'][0]['legs'][leg][0];assert car['driver'] is None;assert car['riders']==['m2','m3']
+ assert loaded['plans'][0]['status']=='draft'
+ r=patch(env,u,loaded,{'attendance':{**attendance,'e|m1':True}});assert r.status_code==200;assert r.json()['plans']==loaded['plans']
+
 def test_auth_cookie_csrf_origin(env):
  c=env;u=account(c);assert module.COOKIE in c.cookies
  assert c.post('/api/groups',json={'name':'x'}).status_code==403

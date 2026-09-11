@@ -81,7 +81,20 @@ export function updateState(old,changes,user,owner,gid,operators){
  const prior=new Map(old.plans.map(p=>[p.id,p])),locked=new Set(old.settlements.filter(x=>x.locked).flatMap(x=>x.planIds||[]));
  for(const id of locked)if(prior.has(id)&&!s.plans.some(p=>p.id===id))fail('精算確定済みの配車は削除できません。先に月の確定を解除してください',409);
  for(const p of s.plans){if(locked.has(p.id)&&!equal(p,prior.get(p.id)))fail('精算確定済みです。先に月の確定を解除してください',409);if(!equal(p,prior.get(p.id))&&p.status==='registered')validateRegistered(s,p);}
+ if(Object.hasOwn(changes,'attendance'))reconcileAbsent(s,s.events.filter(e=>Object.keys(s.attendance).some(k=>k.startsWith(e.id+'|')&&s.attendance[k]!==old.attendance[k])).map(e=>e.id));
  for(const p of old.plans)if(locked.has(p.id)&&!equal(s.events.find(e=>e.id===p.eventId),old.events.find(e=>e.id===p.eventId)))fail('精算確定済みの予定は変更できません',409);
  for(const key of ['events','tasks','notices','equipment'])if(Object.hasOwn(changes,key))for(const x of s[key]){const prev=old[key].find(y=>y.id===x.id);if(equal(x,prev))continue;x.updatedAt=new Date().toISOString();x.updatedBy=user.id;if(key==='notices'){x.author=prev?.author??user.name;x.authorId=prev?.authorId??user.id;x.date=prev?.date??today();}if(key==='tasks'||(key==='events'&&x.kind==='executive')){x.completedBy=x.done?user.id:null;x.completedAt=x.done?new Date().toISOString():null;}}
  return s;
 }
+
+function reconcileAbsent(s,eventIds){
+ const locked=new Set((s.settlements||[]).filter(x=>x.locked).flatMap(x=>x.planIds||[]));
+ for(const p of s.plans){if(!eventIds.includes(p.eventId)||locked.has(p.id))continue;let changed=false;
+  for(const leg of ['outbound','return'])for(const car of p.legs[leg]){
+   if(car.driver&&!attendanceParticipant(s,p.eventId,car.driver)){car.driver=null;changed=true;}
+   const riders=car.riders.filter(id=>attendanceParticipant(s,p.eventId,id));if(riders.length!==car.riders.length){car.riders=riders;changed=true;}
+  }
+  if(changed){p.status='draft';p.version=(p.version||0)+1;}
+ }
+}
+function attendanceParticipant(s,eid,mid){const p=s.people.find(p=>p.id===mid);return Boolean(p&&p.active!==false&&(s.attendance[eid+'|'+mid]??p.defaultOverride??p.seniority==='below'));}
