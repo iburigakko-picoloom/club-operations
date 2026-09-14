@@ -17,6 +17,10 @@ test('attendance-only role removes absent riders and drivers on both legs withou
 test('attendance changes preserve finalized carpool snapshots',()=>{
  const s=populated();s.plans=[plan()];s.settlements=[{id:'snap',locked:true,planIds:['p']}];const next=update(s,{attendance:{...s.attendance,'e|m1':false}});assert.deepEqual(next.plans,s.plans);assert.deepEqual(next.settlements,s.settlements);
 });
+test('stale absent occupants are repaired even without another attendance change',()=>{
+ const s=populated();s.attendance['e|m1']=false;s.plans=[plan()];const next=update(s,{});assert.deepEqual(next.plans[0].legs.outbound[0].riders,['m2','m3']);assert.deepEqual(next.attendance,s.attendance);
+ const stale=structuredClone(next.plans);stale[0].legs.outbound[0].riders.push('m1');stale[0].legs.return[0].riders.push('m1');const saved=update(next,{plans:stale});assert.deepEqual(saved.plans[0].legs.outbound[0].riders,['m2','m3']);
+});
 test('valid state, attendance defaults and manual values',()=>{const s=populated();validate(s,ops);assert.equal(s.attendance['e|m0'],true);s.attendance['e|m0']=false;seedAttendance(s);assert.equal(s.attendance['e|m0'],false);});
 test('attendance month-end horizon and far dates',()=>{const s=populated();s.attendance={};s.events[0].date='2026-05-01';seedAttendance(s,'2026-01-31');assert.deepEqual(s.attendance,{});s.events[0].date='2026-04-30';seedAttendance(s,'2026-01-31');assert.equal(s.attendance['e|m0'],true);});
 test('owner and module assignment required; owner cannot be supplied',()=>{const s=populated();assert.throws(()=>update(s,{people:[]},viewer),e=>e.status===403);assert.throws(()=>update(s,{roles:{}},viewer),e=>e.status===403);assert.throws(()=>update(s,{ownerId:'viewer'}));assert.throws(()=>update(s,{group:{id:'other',name:'x'}}),e=>e.status===403);s.roles['備品']=['viewer'];assert.equal(update(s,{equipment:[{id:'q',name:'ボール',quantity:2,unit:'個',threshold:null}]},viewer).equipment.length,1);});
