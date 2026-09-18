@@ -285,6 +285,9 @@ document.addEventListener('click',async ev=>{
 // Form edits don't rebuild while typing, avoiding focus loss on mobile.
 document.addEventListener('input',ev=>{const el=ev.target;if(el.name==='practiceTitle'&&practiceDraft)practiceDraft.title=el.value;});
 document.addEventListener('change',async ev=>{const el=ev.target;try{
+ if(el.name==='attendanceMonth'){const next=clubEvents().filter(e=>e.date.startsWith(el.value)).sort((a,b)=>a.date.localeCompare(b.date))[0];if(next)ui.attendanceEvent=next.id;render();return;}
+ if(el.name==='attendanceDate'){if(clubEvents().some(e=>e.id===el.value))ui.attendanceEvent=el.value;render();return;}
+
  if(el.name==='practiceImageTime'&&practiceDraft)practiceDraft.showImageTime=el.checked;
  if(el.name==='kind'&&el.form?.dataset.form==='event2'){el.form.querySelector('[data-club-fields]').hidden=el.value!=='club';el.form.querySelector('[data-exec-fields]').hidden=el.value!=='executive';}
  if(el.name==='repeatMode')document.querySelectorAll('[data-repeat]').forEach(n=>n.hidden=n.dataset.repeat!==el.value);

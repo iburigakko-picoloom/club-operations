@@ -1,4 +1,10 @@
 const test=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
+test('attendance date picker includes past and distant months and filters days by selected month',()=>{
+ const events=[{id:'old',date:'2026-01-03',title:'練習'},{id:'now',date:'2026-09-18',title:'練習'},{id:'later',date:'2027-02-04',title:'練習'}];
+ const c={clubEvents:()=>events,DEMO_TODAY:'2026-09-18',esc:s=>s,jpDate:s=>s,eventVenue:()=>null};vm.createContext(c);const s=fs.readFileSync('web/base.js','utf8');vm.runInContext(s.slice(s.indexOf('function attendanceDatePicker('),s.indexOf('function renderAttendance()')),c);
+ const html=c.attendanceDatePicker(events[1]);assert.match(html,/value="2026-01"/);assert.match(html,/value="2027-02"/);assert.match(html,/value="now" selected/);assert.doesNotMatch(html,/value="old"|value="later"/);
+ assert.match(c.attendanceDatePicker(events[2]),/value="later" selected/);
+});
 function setup(){let route='home';const listeners={},texts=[];
  const painter={fillText:t=>texts.push(t),fillRect:()=>{},strokeRect:()=>{}};
  const p={eventId:'e',linked:true,enabled:{outbound:true,return:true}},e={date:'2026-09-06',title:'練習'};
