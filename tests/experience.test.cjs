@@ -1,4 +1,9 @@
 const test=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
+test('calendar image centers month, enlarges entries and omits venue suffix without changing data',()=>{
+ const text=[],painter={fillText(textValue,x,y){text.push({text:textValue,x,y,font:this.font,align:this.textAlign});},fillRect(){},strokeRect(){}};
+ const item={id:'e',kind:'club',title:'練習'},c={ui:{calendarYear:2026,calendarMonth:8},state:{},document:{createElement:()=>({getContext:()=>({})})},D:{calendarItems:(_,date)=>date==='2026-09-01'?[item]:[]},event:()=>item,measureLines:(_,t)=>[t],calVenueName:()=> '西部体育館',imageCanvas:(w,h)=>[{width:w,height:h},painter]};vm.createContext(c);
+ const s=fs.readFileSync('web/app.js','utf8');vm.runInContext(s.slice(s.indexOf('function drawCalendar('),s.indexOf("/* Carpool's single")),c);const cv=c.drawCalendar();const month=text.find(t=>t.text==='2026年9月');assert.equal(month.x,cv.width/2);assert.equal(month.align,'center');assert.match(month.font,/36px/);assert.match(text.find(t=>t.text==='練習').font,/18px/);assert.ok(text.some(t=>t.text==='西部'));assert.ok(!text.some(t=>t.text.includes('体育館')));assert.equal(item.title,'練習');
+});
 test('attendance date picker includes past and distant months and filters days by selected month',()=>{
  const events=[{id:'old',date:'2026-01-03',title:'練習'},{id:'now',date:'2026-09-18',title:'練習'},{id:'later',date:'2027-02-04',title:'練習'}];
  const c={clubEvents:()=>events,DEMO_TODAY:'2026-09-18',esc:s=>s,jpDate:s=>s,eventVenue:()=>null};vm.createContext(c);const s=fs.readFileSync('web/base.js','utf8');vm.runInContext(s.slice(s.indexOf('function attendanceDatePicker('),s.indexOf('function renderAttendance()')),c);
