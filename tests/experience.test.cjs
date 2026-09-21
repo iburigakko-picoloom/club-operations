@@ -1,4 +1,8 @@
 const test=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
+test('calendar fits five glyphs to measured width including padding and font differences',()=>{
+ const labels=[34,42,58,80].map(clientWidth=>({clientWidth,textContent:'あいうえお',style:{}}));
+ const c={document:{createElement:()=>({getContext:()=>({measureText:t=>({width:Array.from(t).length*13})})}),querySelectorAll:()=>labels},getComputedStyle:()=>({paddingLeft:'3',paddingRight:'3',fontWeight:'500',fontFamily:'sans-serif'})};vm.createContext(c);const s=fs.readFileSync('web/calendar.js','utf8');vm.runInContext(s.slice(s.indexOf('function calFitLabels('),s.indexOf("if(typeof MutationObserver")),c);c.calFitLabels();for(const el of labels){const font=parseFloat(el.style.fontSize);assert.ok(font<=12);assert.ok(65*font/12<=el.clientWidth-7);}
+});
 test('calendar image centers month, enlarges entries and omits venue suffix without changing data',()=>{
  const text=[],painter={fillText(textValue,x,y){text.push({text:textValue,x,y,font:this.font,align:this.textAlign});},fillRect(){},strokeRect(){}};
  const item={id:'e',kind:'club',title:'練習'},c={ui:{calendarYear:2026,calendarMonth:8},state:{},document:{createElement:()=>({getContext:()=>({})})},D:{calendarItems:(_,date)=>date==='2026-09-01'?[item]:[]},event:()=>item,measureLines:(_,t)=>[t],calVenueName:()=> '西部体育館',imageCanvas:(w,h)=>[{width:w,height:h},painter]};vm.createContext(c);
