@@ -51,7 +51,15 @@ function sessionInfo(eid){const e=event(eid);if(!e)return null;const minutes=e.s
 function sessionSummary(info){return info?`${jpDate(info.date)}　${esc(info.venue||'体育館未設定')}<div class="row-sub">${info.participants}人${info.courts?'　'+info.courts+'面':''}${info.minutes!==null?'　'+info.minutes+'分':''}</div>`:'予定を選択';}
 function practicePicker(label='練習日',id=practiceEvent){return `<div class="field"><span class="label">${label}</span>${action('practice-event-pick',`<span>${sessionSummary(sessionInfo(id))}</span>${icon('chev','chev')}`,'','selector')}</div>`;}
 renderPractice=function(){const e=event(practiceEvent);return shell('練習メニュー','operations',(e?`<div class="session-compact">${sessionSummary(sessionInfo(e.id))}</div>`:'')+entry('メニュー表作成','practice-new','paper')+entry('メニュー一覧','menu-list','paper')+entry('分類一覧','practice-categories','grid')+entry('練習メニュー履歴','practice-saved','clock')+(state.training.menus.length?'':`<div class="form-actions">${edit('training')?action('practice-defaults','初期メニューを追加','','secondary full'):''}</div>`),'operations');};
-function newPractice(id){if(id){const sh=state.training.sheets.find(x=>x.id===id);if(!sh)return;practiceDraft=clone(sh);}else practiceDraft={id:UID(),title:'練習メニュー',eventId:practiceEvent||'',context:sessionInfo(practiceEvent),patterns:[4,5],showImageTime:false,rows:[],memo:'',updatedAt:null};practiceCategory='all';practiceReorder=false;go('practice-select');}
+function practicePreviousWeek(){
+ if(!practiceDraft||practiceDraft.rows.length||!practiceDraft.eventId)return false;
+ const target=event(practiceDraft.eventId);if(!target)return false;
+ const date=D.addDays(target.date,-7),candidates=[...state.training.sheets,...(state.training.history||[]).map(h=>({...h.snapshot,updatedAt:h.createdAt}))];
+ const source=candidates.filter(s=>(event(s.eventId)?.date||s.context?.date)===date&&s.rows?.length).sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''))[0];
+ if(!source)return false;
+ Object.assign(practiceDraft,{title:source.title,patterns:clone(source.patterns||[4,5]),rows:clone(source.rows),memo:source.memo||'',showImageTime:source.showImageTime!==false});return true;
+}
+function newPractice(id){if(id){const sh=state.training.sheets.find(x=>x.id===id);if(!sh)return;practiceDraft=clone(sh);}else practiceDraft={id:UID(),title:'練習メニュー',eventId:practiceEvent||'',context:sessionInfo(practiceEvent),patterns:[4,5],showImageTime:false,rows:[],memo:'',updatedAt:null};if(!id)practicePreviousWeek();practiceCategory='all';practiceReorder=false;go('practice-select');}
 function categoryIndex(id){const i=state.training.categories.findIndex(c=>c.id===id);return i<0?999:i;}
 function sortedTrainingMenus(list=state.training.menus){return [...list].sort((a,b)=>categoryIndex(a.categoryId)-categoryIndex(b.categoryId)||(a.order??0)-(b.order??0)||String(a.name).localeCompare(String(b.name),'ja'));}
 function normalizeMenuOrders(categoryId){sortedTrainingMenus(state.training.menus.filter(m=>m.categoryId===categoryId)).forEach((m,i)=>m.order=i);}
@@ -238,7 +246,7 @@ document.addEventListener('click',async ev=>{
  case'delete-notice':if(confirm('このお知らせを削除しますか？')){state.notices=state.notices.filter(n=>n.id!==d.id);persist();go('notices');}break;
  case'practice-defaults':state=D.importLegacyTraining(state,LEGACY_DEFAULT).state;persist();render();break;
  case'practice-event-pick':modal('部活予定',action('practice-event-set','予定なし','data-id=""','row')+clubEvents().filter(e=>e.date>=D.addMonths(DEMO_TODAY,-1)&&e.date<=D.addMonths(DEMO_TODAY,3)).map(e=>action('practice-event-set',`<span class="row-main">${jpDate(e.date)} ${esc(eventVenue(e)?.name||e.title)}<span class="row-sub block">${e.start||'時刻なし'}</span></span>${icon('chev','chev')}`,`data-id="${e.id}"`,'row')).join(''));break;
- case'practice-event-set':practiceEvent=d.id;if(practiceDraft){practiceDraft.eventId=d.id;practiceDraft.context=sessionInfo(d.id);}closeModal();render();break;
+ case'practice-event-set':practiceEvent=d.id;if(practiceDraft){practiceDraft.eventId=d.id;practiceDraft.context=sessionInfo(d.id);practicePreviousWeek();}closeModal();render();break;
  case'practice-category':practiceCategory=d.id;render();break;
  case'practice-select-menu':{const m=state.training.menus.find(m=>m.id===d.id),ix=practiceDraft.rows.findIndex(r=>r.menuId===d.id);if(ix>=0)practiceDraft.rows.splice(ix,1);else practiceDraft.rows.push({...clone(m),menuId:m.id,sets:Object.fromEntries(practiceDraft.patterns.map(p=>[p,1]))});render();break;}
  case'practice-next':if(!practiceDraft.title.trim())throw Error('表の名前を入力してください');if(!practiceDraft.rows.length)break;go('practice-sets');break;
