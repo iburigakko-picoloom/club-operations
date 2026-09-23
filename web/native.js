@@ -1,6 +1,9 @@
 'use strict';
 // The Android shell exposes this bridge only while showing our own origin.
 if(window.ClubNative){
+ // New Android shells apply system-bar insets around the WebView themselves.
+ if(typeof window.ClubNative.hasNativeInsets==='function'&&window.ClubNative.hasNativeInsets())
+  document.documentElement.style.setProperty('--app-safe-bottom','0px');
  let registered='',registering='',snapshot='';
  const currentTasks=()=>operationalTasks().filter(t=>!t.done&&!t.deleted&&ownTask(t)).sort((a,b)=>(a.date+(a.time||'')).localeCompare(b.date+(b.time||'')));
  function syncWidget(){

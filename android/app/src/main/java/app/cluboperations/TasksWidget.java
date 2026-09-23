@@ -32,10 +32,8 @@ public final class TasksWidget extends AppWidgetProvider {
     }
     private static void update(Context context, AppWidgetManager manager, int id) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.tasks_widget);
-        Intent open = new Intent(context, MainActivity.class);
-        open.putExtra(MainActivity.EXTRA_URL, MainActivity.APP_URL + "#tasks");
-        open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        views.setOnClickPendingIntent(R.id.widget_root, PendingIntent.getActivity(context, 0, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
+        views.setOnClickPendingIntent(R.id.widget_tasks_area, openScreen(context, "tasks", 0));
+        views.setOnClickPendingIntent(R.id.widget_attendance, openScreen(context, "attendance", 1));
         String stored = context.getSharedPreferences("club_native", Context.MODE_PRIVATE).getString("widget", "null");
         int[] rows = {R.id.widget_task_1, R.id.widget_task_2, R.id.widget_task_3};
         for (int row : rows) { views.setTextViewText(row, ""); views.setViewVisibility(row, View.GONE); }
@@ -60,5 +58,11 @@ public final class TasksWidget extends AppWidgetProvider {
             views.setTextViewText(R.id.widget_more, "開く ›");
         }
         manager.updateAppWidget(id, views);
+    }
+    private static PendingIntent openScreen(Context context, String route, int requestCode) {
+        Intent open = new Intent(context, MainActivity.class);
+        open.putExtra(MainActivity.EXTRA_URL, MainActivity.APP_URL + "#" + route);
+        open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        return PendingIntent.getActivity(context, requestCode, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 }

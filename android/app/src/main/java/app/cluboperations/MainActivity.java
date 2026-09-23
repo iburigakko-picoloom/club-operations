@@ -18,10 +18,18 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import androidx.core.graphics.Insets;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.messaging.FirebaseMessaging;
 import androidx.core.content.FileProvider;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
 import java.io.OutputStream;
@@ -47,12 +55,36 @@ public final class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
         current = new WeakReference<>(this);
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         if (notificationManager != null) notificationManager.createNotificationChannel(new NotificationChannel("club_reminders", "予定とやること", NotificationManager.IMPORTANCE_DEFAULT));
         web = new WebView(this);
         web.setBackgroundColor(0xffffffff);
-        setContentView(web);
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(0xffffffff);
+        root.setClipToPadding(false);
+        View statusBackground = new View(this);
+        statusBackground.setBackgroundColor(0xff14813b);
+        root.addView(statusBackground, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, Gravity.TOP));
+        root.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        ViewCompat.setOnApplyWindowInsetsListener(root, (view, windowInsets) -> {
+            Insets safe = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            int bottom = Math.max(safe.bottom, windowInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom);
+            view.setPadding(safe.left, safe.top, safe.right, bottom);
+            FrameLayout.LayoutParams statusLayout = (FrameLayout.LayoutParams) statusBackground.getLayoutParams();
+            if (statusLayout.height != safe.top) {
+                statusLayout.height = safe.top;
+                statusBackground.setLayoutParams(statusLayout);
+            }
+            statusBackground.setTranslationY(-safe.top);
+            return windowInsets;
+        });
+        setContentView(root);
+        WindowCompat.getInsetsController(getWindow(), root).setAppearanceLightStatusBars(false);
+        WindowCompat.getInsetsController(getWindow(), root).setAppearanceLightNavigationBars(true);
         WebSettings settings = web.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -174,6 +206,7 @@ public final class MainActivity extends Activity {
     }
 
     private final class NativeBridge {
+        @JavascriptInterface public boolean hasNativeInsets() { return true; }
         @JavascriptInterface public String getPushToken() {
             return getSharedPreferences("club_native", MODE_PRIVATE).getString("fcm_token", "");
         }
