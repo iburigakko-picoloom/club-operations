@@ -12,3 +12,6 @@ backups/
 .review-deps/
 .edge-test-run.json
 node_modules/
+android/.gradle/
+android/app/build/
+android/builds/
