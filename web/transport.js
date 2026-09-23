@@ -12,11 +12,12 @@ function clubForget(){clubClearSession();let flow;try{flow=JSON.parse(sessionSto
 async function clubRequest(path,method,data,csrf){
  const base=window.CLUB_HOSTING?.apiBase||'/api';
  const token=window.CLUB_HOSTING?clubSession():'';
+ if(path==='/logout'&&window.ClubNative){const nativeToken=window.ClubNative.getPushToken();if(nativeToken)data={...(data||{}),nativeToken};}
  const r=await fetch(base+path,{method,credentials:window.CLUB_HOSTING?'omit':'same-origin',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{}),...(csrf?{'X-CSRF-Token':csrf}:{})},body:data===undefined?undefined:JSON.stringify(data)});
  let v;try{v=await r.json();}catch{throw Error('サーバーとの接続を確認してください');}
  if(!r.ok){if(r.status===401&&path==='/session')clubClearSession();const e=Error(v.detail||'保存できませんでした');e.status=r.status;throw e;}
  if(v.token&&['/register','/login','/auth/line/exchange'].includes(path)){clubRemember(v.token);delete v.token;}
- if(path==='/logout')clubForget();return v;
+ if(path==='/logout'){clubForget();window.ClubNative?.clearUserData();}return v;
 }
 async function clubStartLine(link=false){
  if(!window.CLUB_HOSTING){if(link){const r=await api('/auth/line/link','POST',{});location.assign(r.authorizeUrl);}else location.assign('/api/auth/line/start');return;}

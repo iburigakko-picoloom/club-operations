@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="14dp" android:background="@drawable/widget_background">
+    <TextView android:id="@+id/widget_heading" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="自分のやること" android:textColor="#14813B" android:textStyle="bold" android:textSize="15sp" android:maxLines="1" />
+    <TextView android:id="@+id/widget_group" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="7dp" android:textColor="#67756B" android:textSize="11sp" android:maxLines="1" android:ellipsize="end" />
+    <TextView android:id="@+id/widget_task_1" style="@style/WidgetTask" />
+    <TextView android:id="@+id/widget_task_2" style="@style/WidgetTask" />
+    <TextView android:id="@+id/widget_task_3" style="@style/WidgetTask" />
+    <TextView android:id="@+id/widget_more" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="#14813B" android:textSize="11sp" android:maxLines="1" />
+</LinearLayout>

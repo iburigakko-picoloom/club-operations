@@ -25,8 +25,14 @@ try{
   await call('/push/subscription','POST',{subscription:{...sub,endpoint:'https://127.0.0.1/'}},a,400);
   await call('/push/subscription','POST',{subscription:sub},a,403,{'X-CSRF-Token':'wrong'});
   await call('/push/subscription','POST',{subscription:sub},a);
+  const nativeToken='ci-device-'+run+'-'.repeat(32);
+  await call('/push/native','POST',{token:nativeToken},undefined,401);
+  await call('/push/native','POST',{token:'bad'},a,400);
+  await call('/push/native','POST',{token:nativeToken},a,403,{'X-CSRF-Token':'wrong'});
+  await call('/push/native','POST',{token:nativeToken},a);
   await call('/push/test','POST',{groupId:gid},a);
   await call('/push/test','POST',{groupId:gid},a,429);
+  await call('/push/native','DELETE',{token:nativeToken},a);
   await call('/push/subscription','DELETE',{endpoint:sub.endpoint},a);
  }
  const endpoint='/groups/'+gid+'/state',patch=(who,state,changes,status=200)=>call(endpoint,'PATCH',{version:state.version,changes},who,status);

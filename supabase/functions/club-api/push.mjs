@@ -8,6 +8,12 @@ export function validateSubscription(sub){
  for(const [key,size] of [['p256dh',65],['auth',16]]){const v=sub.keys?.[key];if(typeof v!=='string'||!(/^[A-Za-z0-9_-]+={0,2}$/).test(v)||Buffer.from(v,'base64url').length!==size)fail('通知の登録情報が不正です');}
  return {endpoint:sub.endpoint,keys:{p256dh:sub.keys.p256dh,auth:sub.keys.auth}};
 }
+export function validateNativeToken(token){
+ // FCM registration tokens are opaque. Restrict size and control characters,
+ // while leaving their future character set to Firebase.
+ if(typeof token!=='string'||token.length<32||token.length>4096||/[^\x21-\x7e]/.test(token))fail('端末の通知登録情報が不正です');
+ return {provider:'fcm',token};
+}
 export function reminderDue(date,time,offset){
  const dt=new Date(`${date}T${time||'09:00'}+09:00`);if(!Number.isFinite(+dt))return NaN;
  if(offset==='P1M'){const d=new Date(+dt+9*3600000),day=d.getUTCDate();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()-1);const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();d.setUTCDate(Math.min(day,last));return (+d-9*3600000)/1000;}
@@ -58,7 +64,7 @@ export async function dispatchPush(transaction,send,appUrl){
  let sent=0,failed=0;
  for(const j of batch){let retry=false;
   for(const sub of j.subs){const done=await transaction(c=>c.unsafe('SELECT 1 FROM club.push_deliveries WHERE job_id=$1 AND subscription_id=$2',[j.id,sub.id]));if(done.length)continue;
-   try{validateSubscription(JSON.parse(sub.data));await send(JSON.parse(sub.data),j.payload);await transaction(c=>c.unsafe('INSERT INTO club.push_deliveries VALUES($1,$2) ON CONFLICT DO NOTHING',[j.id,sub.id]));sent++;}
+   try{const data=JSON.parse(sub.data);if(data.provider==='fcm')validateNativeToken(data.token);else validateSubscription(data);await send(data,j.payload);await transaction(c=>c.unsafe('INSERT INTO club.push_deliveries VALUES($1,$2) ON CONFLICT DO NOTHING',[j.id,sub.id]));sent++;}
    catch(e){if([404,410].includes(e.statusCode))await transaction(c=>c.unsafe('DELETE FROM club.subscriptions WHERE id=$1',[sub.id]));else{retry=true;failed++;}}
   }
   await transaction(c=>c.unsafe('UPDATE club.jobs SET status=$2 WHERE id=$1',[j.id,retry?(j.attempts<2?'pending':'failed'):'sent']));
