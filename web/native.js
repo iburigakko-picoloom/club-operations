@@ -24,6 +24,20 @@ if(window.ClubNative){
  const priorRender=render;
  render=function(){priorRender();queueMicrotask(sync);};
  window.ClubApp.render=()=>render();
+ const priorDownloadCanvas=downloadCanvas;
+ downloadCanvas=function(cv,name){
+  if(!cv)return;
+  if(!window.ClubNative.savePng(name||'画像.png',cv.toDataURL('image/png')))priorDownloadCanvas(cv,name);
+ };
+ const priorShareCanvas=shareCanvas;
+ shareCanvas=async function(cv,name){
+  if(!cv)return;
+  if(!window.ClubNative.sharePng(name||'画像.png',cv.toDataURL('image/png')))await priorShareCanvas(cv,name);
+ };
+ const priorDownloadJSON=downloadJSON;
+ downloadJSON=function(value,name){
+  if(!window.ClubNative.saveText(name,JSON.stringify(value,null,2)))priorDownloadJSON(value,name);
+ };
  const priorEnable=enablePush;
  enablePush=async function(){
   if(!window.ClubNative)return priorEnable();

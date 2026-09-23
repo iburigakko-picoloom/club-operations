@@ -5,10 +5,12 @@ import android.app.Activity;
 import android.app.NotificationManager;
 import android.app.NotificationChannel;
 import android.content.Intent;
+import android.content.ClipData;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Base64;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -19,17 +21,24 @@ import android.webkit.WebViewClient;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.messaging.FirebaseMessaging;
+import androidx.core.content.FileProvider;
 import java.lang.ref.WeakReference;
+import java.nio.charset.StandardCharsets;
+import java.io.OutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 
 public final class MainActivity extends Activity {
     static final String APP_URL = "https://iburigakko-picoloom.github.io/club-operations/";
     static final String EXTRA_URL = "club_url";
     private static final int NOTIFICATION_PERMISSION = 101;
     private static final int FILE_CHOICE = 102;
+    private static final int FILE_SAVE = 103;
     private static WeakReference<MainActivity> current = new WeakReference<>(null);
     private WebView web;
     private boolean bridgeAttached;
     private ValueCallback<Uri[]> fileCallback;
+    private byte[] pendingDocument;
 
     static void tokenChanged() {
         MainActivity activity = current.get();
@@ -148,6 +157,15 @@ public final class MainActivity extends Activity {
             fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
             fileCallback = null;
         }
+        if (requestCode == FILE_SAVE) {
+            byte[] content = pendingDocument;
+            pendingDocument = null;
+            if (resultCode == RESULT_OK && data != null && data.getData() != null && content != null) {
+                try (OutputStream stream = getContentResolver().openOutputStream(data.getData())) {
+                    if (stream != null) stream.write(content);
+                } catch (Exception ignored) { }
+            }
+        }
     }
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grants) {
         super.onRequestPermissionsResult(requestCode, permissions, grants);
@@ -178,5 +196,58 @@ public final class MainActivity extends Activity {
         @JavascriptInterface public void clearUserData() {
             runOnUiThread(() -> TasksWidget.save(MainActivity.this, "null"));
         }
+        @JavascriptInterface public boolean savePng(String name, String dataUrl) {
+            byte[] content = decodePng(dataUrl);
+            if (content == null) return false;
+            try { return pickSaveLocation(name, "image/png", content); }
+            catch (Exception e) { return false; }
+        }
+        @JavascriptInterface public boolean sharePng(String name, String dataUrl) {
+            byte[] content = decodePng(dataUrl);
+            if (content == null) return false;
+            runOnUiThread(() -> {
+                try {
+                    File dir = new File(getCacheDir(), "shared");
+                    if (!dir.exists() && !dir.mkdirs()) return;
+                    File file = new File(dir, safeFileName(name, "画像.png"));
+                    try (FileOutputStream output = new FileOutputStream(file)) { output.write(content); }
+                    Uri uri = FileProvider.getUriForFile(MainActivity.this, BuildConfig.APPLICATION_ID + ".files", file);
+                    Intent send = new Intent(Intent.ACTION_SEND);
+                    send.setType("image/png");
+                    send.putExtra(Intent.EXTRA_STREAM, uri);
+                    send.setClipData(ClipData.newRawUri("画像", uri));
+                    send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(Intent.createChooser(send, "画像を共有"));
+                } catch (Exception ignored) { }
+            });
+            return true;
+        }
+        @JavascriptInterface public boolean saveText(String name, String content) {
+            if (content == null || content.length() > 4000000) return false;
+            return pickSaveLocation(name, "application/json", content.getBytes(StandardCharsets.UTF_8));
+        }
+    }
+    private byte[] decodePng(String dataUrl) {
+        if (dataUrl == null || !dataUrl.startsWith("data:image/png;base64,") || dataUrl.length() > 24000000) return null;
+        try { byte[] content = Base64.decode(dataUrl.substring(22), Base64.DEFAULT); return content.length <= 18000000 ? content : null; }
+        catch (Exception e) { return null; }
+    }
+    private String safeFileName(String name, String fallback) {
+        String fileName = name == null ? fallback : name.replaceAll("[\\\\/:*?\"<>|]", "_");
+        if (fileName.length() > 150) fileName = fileName.substring(0, 150);
+        return fileName.isEmpty() ? fallback : fileName;
+    }
+    private boolean pickSaveLocation(String name, String mime, byte[] content) {
+        if (content.length > 18000000) return false;
+        final String title = safeFileName(name, "部活運営");
+        runOnUiThread(() -> {
+            pendingDocument = content;
+            Intent save = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+            save.addCategory(Intent.CATEGORY_OPENABLE);
+            save.setType(mime);
+            save.putExtra(Intent.EXTRA_TITLE, title);
+            try { startActivityForResult(save, FILE_SAVE); } catch (Exception ignored) { pendingDocument = null; }
+        });
+        return true;
     }
 }

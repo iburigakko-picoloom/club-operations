@@ -117,7 +117,7 @@ function wfCalendarExport(){if(ui.calendarSelf){wfImagePreview(drawCalendar(true
 function wfImagePreview(cv,name,title){
  const data=cv.toDataURL('image/png'),bytes=Uint8Array.from(atob(data.split(',')[1]),c=>c.charCodeAt(0)),blob=new Blob([bytes],{type:'image/png'});
  wf.image={cv,name,blob,file:new File([blob],name,{type:'image/png'})};
- let share=false;try{share=!!(navigator.share&&navigator.canShare?.({files:[wf.image.file]}));}catch{}
+ let share=!!window.ClubNative?.sharePng;try{share=share||!!(navigator.share&&navigator.canShare?.({files:[wf.image.file]}));}catch{}
  modal(title,`<img class="image-preview" alt="${esc(title)}" src="${data}"><div class="wf-two wf-gap">${action('wf-image-save','画像を保存','','primary')}${action('wf-image-share','共有する',share?'':'disabled','secondary')}</div>${!share?'<p class="note wf-gap">この環境では画像共有に未対応です。保存した画像を送信してください。</p>':''}`);
 }
 function wfRenderRoute(r,id,extra){
@@ -198,7 +198,7 @@ window.addEventListener('click',async ev=>{
  case'wf-calendar-image':case'calendar-image':case'calendar-export':wfCalendarExport();break;
  case'wf-calendar-preview':{const all=document.querySelector('[name="wf-calendar-scope"]:checked')?.value==='all';wfImagePreview(drawCalendar(all),'予定表_'+ui.calendarYear+'-'+String(ui.calendarMonth+1).padStart(2,'0')+(all?'_幹部込み':'_部活のみ')+'.png','予定表の画像');break;}
  case'wf-image-save':if(wf.image){downloadCanvas(wf.image.cv,wf.image.name);toast('画像の保存を開始しました');}break;
- case'wf-image-share':if(wf.image&&navigator.share)await navigator.share({files:[wf.image.file],title:wf.image.name});break;
+ case'wf-image-share':if(wf.image&&window.ClubNative?.sharePng)window.ClubNative.sharePng(wf.image.name,wf.image.cv.toDataURL('image/png'));else if(wf.image&&navigator.share)await navigator.share({files:[wf.image.file],title:wf.image.name});break;
  }
  }catch(err){if(err.name!=='AbortError')toast(err.message||'操作できませんでした');}
  finally{wf.pending=false;}
