@@ -17,6 +17,14 @@ test('attendance-only role removes absent riders and drivers on both legs withou
 test('attendance changes preserve finalized carpool snapshots',()=>{
  const s=populated();s.plans=[plan()];s.settlements=[{id:'snap',locked:true,planIds:['p']}];const next=update(s,{attendance:{...s.attendance,'e|m1':false}});assert.deepEqual(next.plans,s.plans);assert.deepEqual(next.settlements,s.settlements);
 });
+test('deleting a member is soft, excludes them from future participation and preserves past carpool history',()=>{
+ const s=populated();s.events[0].date=new Date(Date.now()-86400000).toISOString().slice(0,10);s.plans=[plan()];s.plans[0].status='registered';const before=structuredClone(s.plans[0]),people=structuredClone(s.people);people[1].active=false;
+ const next=update(s,{people});assert.equal(next.people.length,s.people.length);assert.equal(next.people.find(p=>p.id==='m1').active,false);assert.equal(next.people.filter(p=>p.active).some(p=>p.id==='m1'),false);assert.deepEqual(next.plans[0],before);
+ assert.throws(()=>update(s,{people},{id:'viewer'}),e=>e.status===403);
+});
+test('deactivating a member removes them from today and later plans while retaining the attendance record',()=>{
+ const s=populated();s.plans=[plan()];const people=structuredClone(s.people);people[1].active=false;const next=update(s,{people});assert.equal(next.plans[0].legs.outbound[0].riders.includes('m1'),false);assert.equal(next.plans[0].legs.return[0].riders.includes('m1'),false);assert.equal(next.plans[0].status,'draft');assert.equal(next.attendance['e|m1'],true);
+});
 test('stale absent occupants are repaired even without another attendance change',()=>{
  const s=populated();s.attendance['e|m1']=false;s.plans=[plan()];const next=update(s,{});assert.deepEqual(next.plans[0].legs.outbound[0].riders,['m2','m3']);assert.deepEqual(next.attendance,s.attendance);
  const stale=structuredClone(next.plans);stale[0].legs.outbound[0].riders.push('m1');stale[0].legs.return[0].riders.push('m1');const saved=update(next,{plans:stale});assert.deepEqual(saved.plans[0].legs.outbound[0].riders,['m2','m3']);

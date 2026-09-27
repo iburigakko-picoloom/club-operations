@@ -123,6 +123,7 @@ public final class MainActivity extends Activity {
     }
     private String safeAppUrl(Intent intent) {
         String value = intent == null ? null : intent.getStringExtra(EXTRA_URL);
+        if (value == null && intent != null) value = intent.getStringExtra("url");
         if (value == null) return APP_URL;
         Uri uri = Uri.parse(value);
         return isAppUri(uri) ? uri.toString() : APP_URL;

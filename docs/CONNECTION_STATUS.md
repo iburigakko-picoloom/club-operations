@@ -23,3 +23,9 @@ LINEは部活専用チャネル（2011465614）を作成し、公開済みにし
 予定を画面高に合わせて表示し、出欠行を44pxに圧縮。重複する説明を整理し、詳細画面の戻る先を開いた元の画面へ変更。軽い画面遷移・モーダル表示を追加し、動きを減らすOS設定に対応。
 配車画像は未配車・運転者未定を含む横長レイアウト。画像生成は下書きでも可能で、配車登録・精算の検証は維持。
 招待は1リンクにつき1〜100人を指定でき、利用人数はサーバーのトランザクション内で加算。既存の1人用リンクと無効化を維持。
+
+## 2026-09-27 通知の再確認
+
+Supabase `club-app-push` cron は毎分有効で、確認時点までの実行は28,468回すべて成功。`club.push_config` では送信workerが有効で、worker token も設定済み。Edge Function `/config` は `push=true` / `nativePush=false` を返しており、Web Push は有効だが Android FCM はまだ利用できない。`FCM_SERVICE_ACCOUNT_JSON` の実値は確認せず、設定欠落と形式不正の区別も取得できていない。
+
+Android workflow は `FIREBASE_APP_ID`、`FIREBASE_API_KEY`、`FIREBASE_SENDER_ID`、`FIREBASE_PROJECT_ID` をビルド時に使う。実端末・通知タップ・APK の今回の再検証は未実施。FCM のHTTP mock、通知jobの最大3回retry、重複delivery抑止はローカルNodeテストで確認する。

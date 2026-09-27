@@ -415,8 +415,9 @@ async def update_state(gid:str,req:Request):
         def participating(eid,mid):
             m=members.get(mid)
             return bool(m and m.get('active',True) and s['attendance'].get(eid+'|'+mid,m.get('defaultOverride') if m.get('defaultOverride') is not None else m['seniority']=='below'))
+        event_dates={e['id']:e.get('date','') for e in s['events']}
         for p in s['plans']:
-            if p['id'] in locked:continue
+            if p['id'] in locked or event_dates.get(p['eventId'],'')<now().date().isoformat():continue
             changed=False
             for leg in ('outbound','return'):
                 for car in p['legs'][leg]:

@@ -13,9 +13,13 @@ test('fixed item once and 5-person not4plus5',()=>{const rows=[{name:'ノック'
 test('current GitHub-style pattern totals use people-set equality',()=>{const rows=[{name:'ノック',seconds:60,requiresSets:true,sets:{4:5,5:4}},{name:'ジョグ',seconds:300,requiresSets:false,sets:{}}];const t=D.trainingTotals(rows,[4,5]);assert.equal(t.totals[4].peopleSets,20);assert.equal(t.totals[5].peopleSets,20);assert.equal(t.totals[4].seconds,1500);assert.equal(t.totals[5].seconds,1500);assert.equal(t.mismatch,false);const bad=D.trainingTotals([{name:'ノック',seconds:60,requiresSets:true,sets:{4:1,5:1}}],[4,5]);assert.equal(bad.mismatch,true);assert.deepEqual(bad.mismatchMenus,['ノック']);});
 test('reject invalid sets and patterns',()=>{assert.throws(()=>D.trainingTotals([{seconds:60,requiresSets:true,sets:{4:-1}}],[4]));assert.throws(()=>D.trainingTotals([], [1,2,3]));assert.throws(()=>D.trainingTotals([{seconds:60,requiresSets:true}],[]));});
 test('demo attendance reconciliation removes only absent occupants of affected unlocked plans',()=>{
- const s=sample();s.attendance['ev|a']=false;const p={id:'p',eventId:'ev',linked:true,status:'registered',version:2,legs:{outbound:[{driver:'a',riders:['b','c']}],return:[{driver:'b',riders:['a','c']}]}};
+ const s=sample();s.events[0].date=D.addDays(D.today(),1);s.attendance['ev|a']=false;const p={id:'p',eventId:'ev',linked:true,status:'registered',version:2,legs:{outbound:[{driver:'a',riders:['b','c']}],return:[{driver:'b',riders:['a','c']}]}};
  s.plans=[p,{...structuredClone(p),id:'locked'},{...structuredClone(p),id:'other',eventId:'other'}];s.settlements=[{locked:true,planIds:['locked']}];const before=structuredClone(s.plans);
  D.reconcileAbsent(s,['ev']);assert.equal(p.legs.outbound[0].driver,null);assert.deepEqual(p.legs.outbound[0].riders,['b','c']);assert.deepEqual(p.legs.return[0].riders,['c']);assert.equal(p.version,3);assert.deepEqual(s.plans.slice(1),before.slice(1));D.reconcileAbsent(s,['ev']);assert.equal(p.version,3);
+});
+test('inactive member is excluded from future participants while historical carpools keep their IDs',()=>{
+ const s=sample(),event=s.events[0],p={id:'past',eventId:event.id,linked:true,status:'registered',version:3,legs:{outbound:[{driver:'a',riders:['b','c']}],return:[{driver:'a',riders:['b','c']}]}};event.date=D.addDays(D.today(),-1);s.plans=[p];const before=structuredClone(p);s.people.find(x=>x.id==='b').active=false;
+ D.reconcileAbsent(s,[event.id]);assert.equal(s.people.find(x=>x.id==='b').active,false);assert.equal(D.participating(s,event.id,'b'),false);assert.deepEqual(D.missing(s,p,'outbound').includes('b'),false);assert.deepEqual(p,before);
 });
 test('compare aggregate person-sets even when individual menus differ',()=>{
  const rows=[{name:'A',seconds:60,requiresSets:true,sets:{4:4,5:2}},{name:'B',seconds:120,requiresSets:true,sets:{4:1,5:2}},{name:'休憩',seconds:90,requiresSets:false}];

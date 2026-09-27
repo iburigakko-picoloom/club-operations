@@ -16,7 +16,7 @@ test('FCM sender signs an OAuth assertion and sends only to the configured proje
  assert.equal(JSON.parse(Buffer.from(parts[1],'base64url')).scope,'https://www.googleapis.com/auth/firebase.messaging');
  assert.equal(calls[1].url,'https://fcm.googleapis.com/v1/projects/club-project/messages:send');
  assert.equal(calls[1].options.headers.Authorization,'Bearer access');
- assert.deepEqual(JSON.parse(calls[1].options.body).message.notification,{title:'確認',body:'明日'});
+ const message=JSON.parse(calls[1].options.body).message;assert.deepEqual(message.notification,{title:'確認',body:'明日'});assert.equal(message.token,'device-token');assert.equal(message.data.url,'https://app.example/#tasks');assert.equal(message.data.resourceType,'task');assert.equal(message.data.resourceId,'t1');assert.equal(message.android.priority,'HIGH');assert.equal(message.android.notification.channel_id,'club_reminders');
  await send({token:'second'},JSON.stringify({title:'次'}));
  assert.equal(calls.filter(c=>c.url==='https://oauth2.googleapis.com/token').length,1);
 });

@@ -89,7 +89,7 @@ export function updateState(old,changes,user,owner,gid,operators){
 
 function reconcileAbsent(s,eventIds){
  const locked=new Set((s.settlements||[]).filter(x=>x.locked).flatMap(x=>x.planIds||[]));
- for(const p of s.plans){if(!eventIds.includes(p.eventId)||locked.has(p.id))continue;let changed=false;
+ for(const p of s.plans){const eventDate=s.events.find(e=>e.id===p.eventId)?.date;if(!eventIds.includes(p.eventId)||locked.has(p.id)||eventDate<today())continue;let changed=false;
   for(const leg of ['outbound','return'])for(const car of p.legs[leg]){
    if(car.driver&&!attendanceParticipant(s,p.eventId,car.driver)){car.driver=null;changed=true;}
    const riders=car.riders.filter(id=>attendanceParticipant(s,p.eventId,id));if(riders.length!==car.riders.length){car.riders=riders;changed=true;}

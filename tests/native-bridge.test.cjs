@@ -16,3 +16,7 @@ test('Android bridge shows only this account’s pending tasks and registers its
  sandbox.ctx.user=null;sandbox.render();await new Promise(resolve=>setImmediate(resolve));
  assert.equal(saved.at(-1),null);
 });
+
+test('Android notification URL is resolved from FCM data extras and remains same-origin validated',()=>{
+ const java=fs.readFileSync('android/app/src/main/java/app/cluboperations/MainActivity.java','utf8');assert.match(java,/getStringExtra\(EXTRA_URL\)/);assert.match(java,/getStringExtra\("url"\)/);assert.match(java,/return isAppUri\(uri\) \? uri\.toString\(\) : APP_URL/);assert.match(java,/iburigakko-picoloom\.github\.io/);
+});

@@ -147,6 +147,6 @@ function calFitLabels(){
 }
 if(typeof MutationObserver!=='undefined'){
  let pending=false;const fit=()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;calFitLabels();});};
- const root=document.getElementById('app');if(root){new MutationObserver(fit).observe(root,{childList:true,subtree:true});if(typeof ResizeObserver!=='undefined')new ResizeObserver(fit).observe(root);}
+ const root=document.getElementById('app');if(root){try{new MutationObserver(fit).observe(root,{childList:true,subtree:true});}catch{window.addEventListener('hashchange',fit);}if(typeof ResizeObserver!=='undefined')try{new ResizeObserver(fit).observe(root);}catch{}}
  window.addEventListener('resize',fit);document.fonts?.ready.then(fit);fit();
 }
