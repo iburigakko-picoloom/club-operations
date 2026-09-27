@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from server import accounting as acct
 
 ROOT=Path(__file__).resolve().parents[1]
 DB_PATH=Path(os.environ.get('CLUB_DB', str(ROOT/'data'/'club.sqlite3')))
@@ -56,6 +57,33 @@ def init_db():
         CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,group_id TEXT,user_id TEXT,action TEXT,created_at TEXT,details TEXT);
         CREATE TABLE IF NOT EXISTS subscriptions(id TEXT PRIMARY KEY,user_id TEXT NOT NULL,data TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY,group_id TEXT NOT NULL,recipient TEXT NOT NULL,due REAL NOT NULL,payload TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',attempts INTEGER NOT NULL DEFAULT 0);
+        CREATE TABLE IF NOT EXISTS accounting_collections(
+          id TEXT NOT NULL, group_id TEXT NOT NULL, title TEXT NOT NULL, note TEXT NOT NULL DEFAULT '',
+          due_date TEXT, event_id TEXT, status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','closed')),
+          created_by TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+          PRIMARY KEY(group_id,id), FOREIGN KEY(group_id) REFERENCES groups(id) ON DELETE CASCADE
+        );
+        CREATE TABLE IF NOT EXISTS accounting_collection_members(
+          group_id TEXT NOT NULL, collection_id TEXT NOT NULL, member_id TEXT NOT NULL,
+          snapshot_status TEXT CHECK(snapshot_status IS NULL OR snapshot_status IN ('present','absent')),
+          amount INTEGER CHECK(amount IS NULL OR amount BETWEEN 0 AND 1000000000),
+          status TEXT NOT NULL CHECK(status IN ('unpaid','paid','undetermined')),
+          paid_at TEXT, note TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+          PRIMARY KEY(group_id,collection_id,member_id),
+          FOREIGN KEY(group_id,collection_id) REFERENCES accounting_collections(group_id,id) ON DELETE CASCADE,
+          CHECK((status='undetermined' AND amount IS NULL AND paid_at IS NULL) OR (status<>'undetermined' AND amount IS NOT NULL)),
+          CHECK((status='paid' AND paid_at IS NOT NULL) OR (status<>'paid' AND paid_at IS NULL))
+        );
+        CREATE TABLE IF NOT EXISTS accounting_transactions(
+          id TEXT NOT NULL, group_id TEXT NOT NULL, kind TEXT NOT NULL CHECK(kind IN ('income','expense')),
+          title TEXT NOT NULL, amount INTEGER NOT NULL CHECK(amount BETWEEN 1 AND 1000000000),
+          date TEXT NOT NULL, category TEXT NOT NULL DEFAULT '', memo TEXT NOT NULL DEFAULT '', event_id TEXT,
+          created_by TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+          PRIMARY KEY(group_id,id), FOREIGN KEY(group_id) REFERENCES groups(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS accounting_collections_due_idx ON accounting_collections(group_id,due_date);
+        CREATE INDEX IF NOT EXISTS accounting_collection_members_status_idx ON accounting_collection_members(group_id,collection_id,status);
+        CREATE INDEX IF NOT EXISTS accounting_transactions_date_idx ON accounting_transactions(group_id,date DESC);
         ''')
         from server.identity import init_identity
         init_identity(c)
@@ -96,7 +124,8 @@ def view(c,g,u):
     return s
 
 def empty_state(gid,name):
-    return {'schema':2,'group':{'id':gid,'name':name},'people':[],'events':[],'tasks':[],'notices':[],'plans':[],'venues':[],'equipment':[],'settlements':[], 'attendance':{},'training':{'categories':[],'menus':[],'sheets':[]},'settings':{'unitYen':None,'reminders':['P7D','P1D']},'roles':{v:[] for v in MODULES.values() if v not in ['設定','権限','グループ']}}
+    role_names={v for v in MODULES.values() if v not in ['設定','権限','グループ']}|{'会計'}
+    return {'schema':2,'group':{'id':gid,'name':name},'people':[],'events':[],'tasks':[],'notices':[],'plans':[],'venues':[],'equipment':[],'settlements':[], 'attendance':{},'training':{'categories':[],'menus':[],'sheets':[]},'settings':{'unitYen':None,'reminders':['P7D','P1D']},'roles':{v:[] for v in role_names}}
 
 def add_months(d,n):
     y=d.year+(d.month-1+n)//12;m=(d.month-1+n)%12+1
@@ -442,6 +471,166 @@ async def update_state(gid:str,req:Request):
         c.execute('UPDATE groups SET data=?,version=version+1 WHERE id=?',(json.dumps(s,ensure_ascii=False),gid))
         c.execute('INSERT INTO audit(group_id,user_id,action,created_at,details) VALUES(?,?,?,?,?)',(gid,u['id'],'update',stamp(),json.dumps(list(changes))))
         schedule_jobs(c,gid,s,old,operators,g['owner_id']);result=view(c,member(c,gid,u['id']),u);c.commit();return result
+
+def accounting_context(c,gid,u,write=False):
+    g=member(c,gid,u['id']);s=json.loads(g['data'])
+    if write and not acct.can_edit(s,u['id'],g['owner_id']):fail('編集権限がありません',403)
+    return g,s
+
+def accounting_audit(c,gid,u,operation,target):
+    c.execute('INSERT INTO audit(group_id,user_id,action,created_at,details) VALUES(?,?,?,?,?)',
+              (gid,u['id'],'accounting',stamp(),json.dumps({'operation':operation,'id':target},ensure_ascii=False)))
+
+def accounting_result(c,gid,s):
+    return acct.read_accounting(c,gid,s)
+
+@app.get('/api/groups/{gid}/accounting')
+def get_accounting(gid:str,req:Request):
+    u=authenticate(req)
+    with connect() as c:
+        c.execute('BEGIN IMMEDIATE');_,s=accounting_context(c,gid,u);result=accounting_result(c,gid,s);c.commit();return result
+
+@app.post('/api/groups/{gid}/accounting/collections')
+async def create_accounting_collection(gid:str,req:Request):
+    u=mutation(req);b=await body(req)
+    with connect() as c:
+        c.execute('BEGIN IMMEDIATE');_,s=accounting_context(c,gid,u,True)
+        title=acct.validate_text(b.get('title'),'名称',120,True);note=acct.validate_text(b.get('note',''),'メモ',2000)
+        due=acct.validate_date(b.get('dueDate'),True);event_id,rows=acct.build_collection_members(s,b)
+        if not rows:fail('徴収対象を選択してください')
+        cid=secrets.token_hex(16);at=stamp()
+        c.execute("INSERT INTO accounting_collections(id,group_id,title,note,due_date,event_id,status,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,'open',?,?,?)",(cid,gid,title,note,due,event_id,u['id'],at,at))
+        for row in rows:
+            c.execute('INSERT INTO accounting_collection_members(group_id,collection_id,member_id,snapshot_status,amount,status,paid_at,note,created_at,updated_at) VALUES(?,?,?,?,?,?,NULL,?,?,?)',(gid,cid,row['memberId'],row['snapshotStatus'],row['amount'],row['status'],row['note'],at,at))
+        accounting_audit(c,gid,u,'collection.create',cid);result=accounting_result(c,gid,s);c.commit();return result
+
+@app.patch('/api/groups/{gid}/accounting/collections/{cid}')
+async def update_accounting_collection(gid:str,cid:str,req:Request):
+    u=mutation(req);b=await body(req)
+    if any(k not in {'title','note','dueDate','eventId','status'} for k in b):fail('変更できない項目です')
+    acct.validate_id(cid,'徴収ID')
+    with connect() as c:
+        c.execute('BEGIN IMMEDIATE');_,s=accounting_context(c,gid,u,True)
+        row=c.execute('SELECT * FROM accounting_collections WHERE group_id=? AND id=?',(gid,cid)).fetchone()
+        if not row:fail('徴収が見つかりません',404)
+        old=dict(row);title=acct.validate_text(b.get('title',old['title']),'名称',120,True);note=acct.validate_text(b.get('note',old['note']),'メモ',2000)
+        due=acct.validate_date(b.get('dueDate',old['due_date']),True);event_id=b.get('eventId',old['event_id']) or None
+        if event_id and not any(e.get('id')==event_id for e in s.get('events',[])):fail('関連予定が見つかりません')
+        status=b.get('status',old['status'])
+        if status not in ('open','closed'):fail('徴収状態を確認してください')
+        at=stamp();c.execute('UPDATE accounting_collections SET title=?,note=?,due_date=?,event_id=?,status=?,updated_at=? WHERE group_id=? AND id=?',(title,note,due,event_id,status,at,gid,cid))
+        accounting_audit(c,gid,u,'collection.update',cid);result=accounting_result(c,gid,s);c.commit();return result
+
+@app.delete('/api/groups/{gid}/accounting/collections/{cid}')
+def delete_accounting_collection(gid:str,cid:str,req:Request):
+    u=mutation(req);acct.validate_id(cid,'徴収ID')
+    with connect() as c:
+        c.execute('BEGIN IMMEDIATE');_,s=accounting_context(c,gid,u,True)
+        row=c.execute('SELECT id FROM accounting_collections WHERE group_id=? AND id=?',(gid,cid)).fetchone()
+        if not row:fail('徴収が見つかりません',404)
+        if c.execute("SELECT 1 FROM accounting_collection_members WHERE group_id=? AND collection_id=? AND status='paid' LIMIT 1",(gid,cid)).fetchone():fail('支払済みの記録がある徴収は削除できません',409)
+        c.execute('DELETE FROM accounting_collections WHERE group_id=? AND id=?',(gid,cid));accounting_audit(c,gid,u,'collection.delete',cid)
+        result=accounting_result(c,gid,s);c.commit();return result
+
+@app.post('/api/groups/{gid}/accounting/collections/{cid}/members')
+async def add_accounting_member(gid:str,cid:str,req:Request):
+    u=mutation(req);b=await body(req)
+    if any(k not in {'memberId','amount','unresolved','note'} for k in b):fail('変更できない項目です')
+    mid=acct.validate_id(b.get('memberId'),'部員ID');unresolved=b.get('unresolved') is True;note=acct.validate_text(b.get('note',''),'メモ',500)
+    amount=None if unresolved else acct.validate_amount(b.get('amount'))
+    with connect() as c:
+        c.execute('BEGIN IMMEDIATE');_,s=accounting_context(c,gid,u,True)
+        collection=c.execute('SELECT event_id FROM accounting_collections WHERE group_id=? AND id=?',(gid,cid)).fetchone()
+        if not collection:fail('徴収が見つかりません',404)
+        p=next((x for x in s.get('people',[]) if x.get('id')==mid),None)
+        if not p:fail('部員が見つかりません')
+        snapshot=acct.snapshot_status(s,collection['event_id'],p);status='undetermined' if unresolved else 'unpaid';at=stamp()
+        c.execute('INSERT INTO accounting_collection_members(group_id,collection_id,member_id,snapshot_status,amount,status,paid_at,note,created_at,updated_at) VALUES(?,?,?,?,?,?,NULL,?,?,?)',(gid,cid,mid,snapshot,amount,status,note,at,at))
+        accounting_audit(c,gid,u,'collection.member.add',cid);result=accounting_result(c,gid,s);c.commit();return result
+
+@app.patch('/api/groups/{gid}/accounting/collections/{cid}/members')
+async def update_accounting_members_bulk(gid:str,cid:str,req:Request):
+    u=mutation(req);b=await body(req)
+    if set(b)-{'memberIds','status'} or not isinstance(b.get('memberIds'),list) or len(b['memberIds'])>1000 or len(set(b['memberIds']))!=len(b['memberIds']) or any(not isinstance(x,str) for x in b['memberIds']) or b.get('status') not in ('paid','unpaid'):fail('一括変更の内容を確認してください')
+    ids=b['memberIds'];status=b['status']
+    with connect() as c:
+        c.execute('BEGIN IMMEDIATE');_,s=accounting_context(c,gid,u,True)
+        if not c.execute('SELECT 1 FROM accounting_collections WHERE group_id=? AND id=?',(gid,cid)).fetchone():fail('徴収が見つかりません',404)
+        rows=[]
+        for mid in ids:
+            row=c.execute('SELECT amount,status,paid_at FROM accounting_collection_members WHERE group_id=? AND collection_id=? AND member_id=?',(gid,cid,mid)).fetchone()
+            if not row:fail('徴収対象が見つかりません',404)
+            if status=='paid' and (row['amount'] is None or row['status']=='undetermined'):fail('未確定の人は金額を決めてから支払済みにしてください')
+            if status=='unpaid' and row['status']=='undetermined':fail('未確定の人は金額を決めてから未払いにしてください')
+            rows.append((mid,row['status'],row['paid_at']))
+        at=stamp()
+        for mid,previous,paid_at in rows:
+            next_paid=paid_at if status=='paid' and previous=='paid' else at if status=='paid' else None
+            c.execute('UPDATE accounting_collection_members SET status=?,paid_at=?,updated_at=? WHERE group_id=? AND collection_id=? AND member_id=?',(status,next_paid,at,gid,cid,mid))
+        accounting_audit(c,gid,u,'collection.members.'+status,cid);result=accounting_result(c,gid,s);c.commit();return result
+
+@app.patch('/api/groups/{gid}/accounting/collections/{cid}/members/{mid}')
+async def update_accounting_member(gid:str,cid:str,mid:str,req:Request):
+    u=mutation(req);b=await body(req)
+    if set(b)-{'amount','status','note'}:fail('変更できない項目です')
+    acct.validate_id(mid,'部員ID')
+    with connect() as c:
+        c.execute('BEGIN IMMEDIATE');_,s=accounting_context(c,gid,u,True)
+        raw=c.execute('SELECT * FROM accounting_collection_members WHERE group_id=? AND collection_id=? AND member_id=?',(gid,cid,mid)).fetchone()
+        if not raw:fail('徴収対象が見つかりません',404)
+        row=dict(raw)
+        if row['status']=='paid' and ('amount' in b or 'note' in b):fail('支払済みの金額・メモを変えるには、先に未払いに戻してください',409)
+        amount=acct.validate_amount(b['amount'],True) if 'amount' in b else row['amount'];status=b.get('status',row['status']);note=acct.validate_text(b.get('note',row['note']),'メモ',500)
+        if status not in ('unpaid','paid','undetermined'):fail('支払状態を確認してください')
+        if 'amount' in b and status=='paid':fail('金額を変えるときは未払い状態にしてください')
+        if status=='undetermined':
+            if amount is not None:fail('未確定には金額を設定できません')
+            paid_at=None
+        else:
+            if amount is None:fail('金額を決めてください')
+            paid_at=(row['paid_at'] or stamp()) if status=='paid' else None
+        at=stamp();c.execute('UPDATE accounting_collection_members SET amount=?,status=?,paid_at=?,note=?,updated_at=? WHERE group_id=? AND collection_id=? AND member_id=?',(amount,status,paid_at,note,at,gid,cid,mid))
+        accounting_audit(c,gid,u,'collection.member.update',cid);result=accounting_result(c,gid,s);c.commit();return result
+
+@app.delete('/api/groups/{gid}/accounting/collections/{cid}/members/{mid}')
+def delete_accounting_member(gid:str,cid:str,mid:str,req:Request):
+    u=mutation(req);acct.validate_id(mid,'部員ID')
+    with connect() as c:
+        c.execute('BEGIN IMMEDIATE');_,s=accounting_context(c,gid,u,True)
+        row=c.execute('SELECT status FROM accounting_collection_members WHERE group_id=? AND collection_id=? AND member_id=?',(gid,cid,mid)).fetchone()
+        if not row:fail('徴収対象が見つかりません',404)
+        if row['status']=='paid':fail('支払済みの記録は削除できません',409)
+        c.execute('DELETE FROM accounting_collection_members WHERE group_id=? AND collection_id=? AND member_id=?',(gid,cid,mid))
+        accounting_audit(c,gid,u,'collection.member.delete',cid);result=accounting_result(c,gid,s);c.commit();return result
+
+@app.post('/api/groups/{gid}/accounting/transactions')
+async def create_accounting_transaction(gid:str,req:Request):
+    u=mutation(req);b=await body(req)
+    with connect() as c:
+        c.execute('BEGIN IMMEDIATE');_,s=accounting_context(c,gid,u,True);v=acct.transaction_fields(s,b);tid=secrets.token_hex(16);at=stamp()
+        c.execute('INSERT INTO accounting_transactions(id,group_id,kind,title,amount,date,category,memo,event_id,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',(tid,gid,v['kind'],v['title'],v['amount'],v['date'],v['category'],v['memo'],v['eventId'],u['id'],at,at))
+        accounting_audit(c,gid,u,'transaction.create',tid);result=accounting_result(c,gid,s);c.commit();return result
+
+@app.patch('/api/groups/{gid}/accounting/transactions/{tid}')
+async def update_accounting_transaction(gid:str,tid:str,req:Request):
+    u=mutation(req);b=await body(req);acct.validate_id(tid,'取引ID')
+    with connect() as c:
+        c.execute('BEGIN IMMEDIATE');_,s=accounting_context(c,gid,u,True)
+        raw=c.execute('SELECT * FROM accounting_transactions WHERE group_id=? AND id=?',(gid,tid)).fetchone()
+        if not raw:fail('取引が見つかりません',404)
+        v=acct.transaction_fields(s,b,dict(raw));at=stamp()
+        c.execute('UPDATE accounting_transactions SET kind=?,title=?,amount=?,date=?,category=?,memo=?,event_id=?,updated_at=? WHERE group_id=? AND id=?',(v['kind'],v['title'],v['amount'],v['date'],v['category'],v['memo'],v['eventId'],at,gid,tid))
+        accounting_audit(c,gid,u,'transaction.update',tid);result=accounting_result(c,gid,s);c.commit();return result
+
+@app.delete('/api/groups/{gid}/accounting/transactions/{tid}')
+def delete_accounting_transaction(gid:str,tid:str,req:Request):
+    u=mutation(req);acct.validate_id(tid,'取引ID')
+    with connect() as c:
+        c.execute('BEGIN IMMEDIATE');_,s=accounting_context(c,gid,u,True)
+        if not c.execute('SELECT 1 FROM accounting_transactions WHERE group_id=? AND id=?',(gid,tid)).fetchone():fail('取引が見つかりません',404)
+        c.execute('DELETE FROM accounting_transactions WHERE group_id=? AND id=?',(gid,tid));accounting_audit(c,gid,u,'transaction.delete',tid)
+        result=accounting_result(c,gid,s);c.commit();return result
+
 @app.post('/api/groups/{gid}/invite')
 async def invite(gid:str,req:Request):
     u=mutation(req);b=await body(req) if await req.body() else {};max_uses=b.get('maxUses',1)

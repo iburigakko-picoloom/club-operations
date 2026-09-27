@@ -14,6 +14,6 @@ def hosted_database(monkeypatch):
     monkeypatch.setenv('CLUB_PG_SCHEMA','club_qa')
     with connect() as c:
         c.execute('BEGIN IMMEDIATE')
-        for table in ['users','sessions','groups','memberships','invites','audit','subscriptions','jobs','identities','login_flows','login_limits']:
+        for table in ['accounting_collection_members','accounting_collections','accounting_transactions','users','sessions','groups','memberships','invites','audit','subscriptions','jobs','identities','login_flows','login_limits']:
             c.execute('DELETE FROM '+table)
         c.commit()

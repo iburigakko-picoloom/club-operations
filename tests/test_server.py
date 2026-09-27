@@ -268,3 +268,71 @@ def test_court_assignment_roundtrip_and_validation(env):
  # An attendance edit keeps the old snapshot; rebuilding must use the new attendance.
  attendance={**s['attendance'],'e|m1':False};response=patch(c,u,s,{'attendance':attendance});assert response.status_code==200,response.text
  assert response.json()['courtAssignments']==courts
+
+
+def test_accounting_snapshots_attendance_and_protects_paid_rows(env):
+ u=account(env);s=populate(env,u,create(env,u));gid=s['group']['id']
+ attendance={**s['attendance'],'e|m0':False,'e|m1':True,'e|m2':True};s=patch(env,u,s,{'attendance':attendance}).json()
+ base=f'/api/groups/{gid}/accounting'
+ payload={'title':'合宿費','note':'初回徴収','dueDate':module.now().date().isoformat(),'eventId':'e','presentAmount':1000,'absentAmount':300,'memberIds':['m0','m1','m2'],'unresolvedMemberIds':['m2'],'amountOverrides':{'m1':750}}
+ created=env.post(base+'/collections',json=payload,headers=auth(u));assert created.status_code==200,created.text
+ data=created.json();collection=data['collections'][0];cid=collection['id'];members={m['memberId']:m for m in collection['members']}
+ assert members['m0']['snapshotStatus']=='absent' and members['m0']['amount']==300 and members['m0']['status']=='unpaid'
+ assert members['m1']['snapshotStatus']=='present' and members['m1']['amount']==750
+ assert members['m2']['snapshotStatus']=='present' and members['m2']['amount'] is None and members['m2']['status']=='undetermined'
+ assert data['summary']['outstanding']==1050 and data['summary']['undeterminedCount']==1
+ assert env.patch(base+f'/collections/{cid}/members',json={'memberIds':['m2'],'status':'unpaid'},headers=auth(u)).status_code==400
+ assert env.patch(base+f'/collections/{cid}/members',json={'memberIds':['m2'],'status':'paid'},headers=auth(u)).status_code==400
+ s=patch(env,u,s,{'attendance':{**s['attendance'],'e|m0':True}}).json()
+ loaded=env.get(base).json();assert next(m for m in loaded['collections'][0]['members'] if m['memberId']=='m0')['snapshotStatus']=='absent'
+ member=base+f'/collections/{cid}/members/m1'
+ paid=env.patch(member,json={'status':'paid'},headers=auth(u));assert paid.status_code==200,paid.text
+ assert paid.json()['summary']['collectionIncome']==750 and paid.json()['summary']['outstanding']==300
+ assert env.patch(member,json={'status':'paid','amount':1},headers=auth(u)).status_code==409
+ assert env.delete(base+f'/collections/{cid}',headers=auth(u)).status_code==409
+ reset=env.patch(member,json={'status':'unpaid'},headers=auth(u));assert reset.status_code==200,reset.text
+ assert reset.json()['summary']['collectionIncome']==0
+ resolve=env.patch(base+f'/collections/{cid}/members/m2',json={'status':'unpaid','amount':125},headers=auth(u));assert resolve.status_code==200,resolve.text
+ assert resolve.json()['summary']['outstanding']==1175 and resolve.json()['summary']['undeterminedCount']==0
+ assert env.delete(base+f'/collections/{cid}/members/m1',headers=auth(u)).status_code==200
+ assert env.delete(base+f'/collections/{cid}',headers=auth(u)).status_code==200
+ assert env.get(base).json()['collections']==[]
+
+
+def test_accounting_without_related_event_has_no_attendance_snapshot(env):
+ u=account(env);s=populate(env,u,create(env,u));base=f"/api/groups/{s['group']['id']}/accounting"
+ created=env.post(base+'/collections',json={'title':'部費','defaultAmount':5000,'memberIds':['m1']},headers=auth(u))
+ assert created.status_code==200,created.text
+ member=created.json()['collections'][0]['members'][0]
+ assert member['snapshotStatus'] is None and member['amount']==5000
+
+
+def test_accounting_transactions_are_persistent_and_summarized(env):
+ u=account(env);s=populate(env,u,create(env,u));base=f"/api/groups/{s['group']['id']}/accounting"
+ income=env.post(base+'/transactions',json={'kind':'income','title':'補助金','amount':5000,'date':module.now().date().isoformat(),'category':'大学','memo':'','eventId':'e'},headers=auth(u))
+ assert income.status_code==200,income.text;income_id=income.json()['transactions'][0]['id']
+ expense=env.post(base+'/transactions',json={'kind':'expense','title':'シャトル購入','amount':1200,'date':module.now().date().isoformat(),'category':'備品','memo':'領収書あり'},headers=auth(u))
+ assert expense.status_code==200,expense.text;data=env.get(base).json()
+ assert data['summary']=={'income':5000,'collectionIncome':0,'otherIncome':5000,'expense':1200,'balance':3800,'outstanding':0,'undeterminedCount':0}
+ assert any(t['id']==income_id and t['eventTitle']=='練習' for t in data['transactions'])
+ edited=env.patch(base+'/transactions/'+income_id,json={'amount':5500,'category':'補助金'},headers=auth(u));assert edited.status_code==200,edited.text
+ assert env.get(base).json()['summary']['balance']==4300
+ assert env.delete(base+'/transactions/'+income_id,headers=auth(u)).status_code==200
+ assert env.get(base).json()['summary']['income']==0
+ assert env.delete(base+'/transactions/not-found',headers=auth(u)).status_code==404
+
+
+def test_accounting_module_permissions_and_state_isolation(env):
+ owner=account(env);s=populate(env,owner,create(env,owner));gid=s['group']['id'];base=f'/api/groups/{gid}/accounting'
+ invite=env.post(f'/api/groups/{gid}/invite',headers=auth(owner));assert invite.status_code==200
+ env.post('/api/logout',headers=auth(owner))
+ operator=account(env,'accounting-op@example.org','会計担当');assert env.post('/api/join',json={'token':invite.json()['token']},headers=auth(operator)).status_code==200
+ assert env.get(base).status_code==200
+ denied=env.post(base+'/transactions',json={'kind':'income','title':'不許可','amount':100,'date':module.now().date().isoformat()},headers=auth(operator));assert denied.status_code==403
+ env.post('/api/logout',headers=auth(operator));owner=env.post('/api/login',json={'email':'a@example.org','password':'test-password-98241'}).json()
+ s=get(env,gid);roles=copy.deepcopy(s['roles']);roles['会計']=[operator['user']['id']]
+ assigned=patch(env,owner,s,{'roles':roles});assert assigned.status_code==200,assigned.text
+ assert patch(env,owner,assigned.json(),{'accounting':[]}).status_code==400
+ env.post('/api/logout',headers=auth(owner));operator=env.post('/api/login',json={'email':'accounting-op@example.org','password':'test-password-98241'}).json()
+ allowed=env.post(base+'/transactions',json={'kind':'income','title':'会計担当の登録','amount':100,'date':module.now().date().isoformat()},headers=auth(operator));assert allowed.status_code==200,allowed.text
+ outsider=account(env,'accounting-out@example.org','部外者');assert env.get(base).status_code==403

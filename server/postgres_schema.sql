@@ -25,6 +25,30 @@ CREATE TABLE IF NOT EXISTS club.identities(provider TEXT NOT NULL,channel TEXT N
 CREATE TABLE IF NOT EXISTS club.line_profiles(user_id TEXT PRIMARY KEY REFERENCES club.users(id) ON DELETE CASCADE,picture TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS club.login_flows(state_hash TEXT PRIMARY KEY,cookie_hash TEXT NOT NULL,nonce TEXT NOT NULL,verifier TEXT NOT NULL,link_user_id TEXT,expires DOUBLE PRECISION NOT NULL);
 CREATE TABLE IF NOT EXISTS club.login_limits(client_hash TEXT PRIMARY KEY,window_start DOUBLE PRECISION NOT NULL,attempts INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS club.accounting_collections(
+  id TEXT NOT NULL, group_id TEXT NOT NULL, title TEXT NOT NULL, note TEXT NOT NULL DEFAULT '',
+  due_date TEXT, event_id TEXT, status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','closed')),
+  created_by TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  PRIMARY KEY(group_id,id), FOREIGN KEY(group_id) REFERENCES club.groups(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS club.accounting_collection_members(
+  group_id TEXT NOT NULL, collection_id TEXT NOT NULL, member_id TEXT NOT NULL,
+    snapshot_status TEXT CHECK(snapshot_status IS NULL OR snapshot_status IN ('present','absent')),
+  amount INTEGER CHECK(amount IS NULL OR amount BETWEEN 0 AND 1000000000),
+  status TEXT NOT NULL CHECK(status IN ('unpaid','paid','undetermined')),
+  paid_at TEXT, note TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  PRIMARY KEY(group_id,collection_id,member_id),
+  FOREIGN KEY(group_id,collection_id) REFERENCES club.accounting_collections(group_id,id) ON DELETE CASCADE,
+  CHECK((status='undetermined' AND amount IS NULL AND paid_at IS NULL) OR (status<>'undetermined' AND amount IS NOT NULL)),
+  CHECK((status='paid' AND paid_at IS NOT NULL) OR (status<>'paid' AND paid_at IS NULL))
+);
+CREATE TABLE IF NOT EXISTS club.accounting_transactions(
+  id TEXT NOT NULL, group_id TEXT NOT NULL, kind TEXT NOT NULL CHECK(kind IN ('income','expense')),
+  title TEXT NOT NULL, amount INTEGER NOT NULL CHECK(amount BETWEEN 1 AND 1000000000),
+  date TEXT NOT NULL, category TEXT NOT NULL DEFAULT '', memo TEXT NOT NULL DEFAULT '', event_id TEXT,
+  created_by TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  PRIMARY KEY(group_id,id), FOREIGN KEY(group_id) REFERENCES club.groups(id) ON DELETE CASCADE
+);
 
 CREATE INDEX IF NOT EXISTS memberships_user_idx ON club.memberships(user_id);
 CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON club.sessions(expires);
@@ -36,6 +60,9 @@ CREATE INDEX IF NOT EXISTS subscriptions_user_idx ON club.subscriptions(user_id)
 CREATE INDEX IF NOT EXISTS jobs_due_idx ON club.jobs(due) WHERE status='pending';
 CREATE INDEX IF NOT EXISTS jobs_group_idx ON club.jobs(group_id);
 CREATE INDEX IF NOT EXISTS flows_expiry_idx ON club.login_flows(expires);
+CREATE INDEX IF NOT EXISTS accounting_collections_due_idx ON club.accounting_collections(group_id,due_date);
+CREATE INDEX IF NOT EXISTS accounting_collection_members_status_idx ON club.accounting_collection_members(group_id,collection_id,status);
+CREATE INDEX IF NOT EXISTS accounting_transactions_date_idx ON club.accounting_transactions(group_id,date DESC);
 
 DO $$ DECLARE item RECORD; BEGIN
   FOR item IN SELECT tablename FROM pg_tables WHERE schemaname='club' LOOP

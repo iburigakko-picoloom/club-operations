@@ -1,6 +1,7 @@
 import {validateSubscription,validateNativeToken,scheduleJobs} from './push.mjs';
 import {createHash,randomBytes,scryptSync,timingSafeEqual} from 'node:crypto';
 import {HttpError,fail,text,object,emptyState,seedAttendance,equal,targeted,updateState} from './domain.mjs';
+import {readAccounting,createCollection,updateCollection,deleteCollection,addCollectionMember,updateCollectionMembers,updateCollectionMember,deleteCollectionMember,createTransaction,updateTransaction,deleteTransaction} from './accounting.mjs';
 export const digest=x=>createHash('sha256').update(x).digest('hex');
 export const random=(n=32)=>randomBytes(n).toString('hex');
 const sec=()=>Date.now()/1000;
@@ -61,6 +62,27 @@ export function createApi({transaction,lineConfig=()=>({enabled:false}),exchange
     const token=path.slice('/invites/'.length);const [r]=await query(c,'SELECT g.id,g.data FROM club.invites i JOIN club.groups g ON g.id=i.group_id WHERE i.token=$1 AND i.used=0 AND i.expires>$2',[digest(token),sec()]);if(!r)fail('招待が無効または期限切れです');let u;try{u=await userFor(c,req);}catch(e){if(e.status!==401)throw e;}const isMember=!!u&&(await query(c,'SELECT 1 FROM club.memberships WHERE group_id=$1 AND user_id=$2',[r.id,u.id])).length>0;return {groupName:JSON.parse(r.data).group.name,isMember,groupId:isMember?r.id:null,access:'運営メンバー（閲覧）'};
    }
    const u=await userFor(c,req,!['GET','HEAD'].includes(method));
+   const accountingMatch=path.match(/^\/groups\/([a-f0-9]{32})\/accounting(?:\/(collections|transactions)(?:\/([\w-]+)(?:\/members(?:\/([\w-]+))?)?)?)?$/);
+   if(accountingMatch){
+    const [,gid,resource,id,memberId]=accountingMatch;const g=await member(c,gid,u.id),s=JSON.parse(g.data),qAccounting=(sql,params=[])=>c.unsafe(sql,params);
+    const canEdit=u.id===g.owner_id||(s.roles?.['会計']||[]).includes(u.id);
+    if(method==='GET'&&!resource)return await readAccounting(qAccounting,gid,s);
+    if(!canEdit)fail('編集権限がありません',403);
+    const now=new Date().toISOString(),common={query:qAccounting,gid,userId:u.id,s,b,now,id:random(16)};
+    if(resource==='collections'&&!id&&method==='POST')await createCollection(qAccounting,common);
+    else if(resource==='collections'&&id&&!path.endsWith('/members')&&!memberId&&method==='PATCH')await updateCollection(qAccounting,{...common,id});
+    else if(resource==='collections'&&id&&!path.endsWith('/members')&&!memberId&&method==='DELETE')await deleteCollection(qAccounting,{gid,id});
+    else if(resource==='collections'&&id&&path.endsWith('/members')&&!memberId&&method==='POST')await addCollectionMember(qAccounting,{...common,id});
+    else if(resource==='collections'&&id&&path.endsWith('/members')&&!memberId&&method==='PATCH')await updateCollectionMembers(qAccounting,{...common,id});
+    else if(resource==='collections'&&id&&memberId&&method==='PATCH')await updateCollectionMember(qAccounting,{...common,id,memberId});
+    else if(resource==='collections'&&id&&memberId&&method==='DELETE')await deleteCollectionMember(qAccounting,{gid,id,memberId});
+    else if(resource==='transactions'&&!id&&method==='POST')await createTransaction(qAccounting,common);
+    else if(resource==='transactions'&&id&&method==='PATCH')await updateTransaction(qAccounting,{...common,id});
+    else if(resource==='transactions'&&id&&method==='DELETE')await deleteTransaction(qAccounting,{gid,id});
+    else fail('見つかりません',404);
+    await qAccounting('INSERT INTO club.audit(group_id,user_id,action,created_at,details) VALUES($1,$2,$3,$4,$5)',[gid,u.id,'accounting',now,JSON.stringify({resource,operation:method.toLowerCase(),id:id||common.id})]);
+    return await readAccounting(qAccounting,gid,s);
+   }
    if(path==='/push/subscription'&&method==='POST'){const sub=validateSubscription(b.subscription);await query(c,'INSERT INTO club.subscriptions VALUES($1,$2,$3) ON CONFLICT(id) DO UPDATE SET user_id=excluded.user_id,data=excluded.data',[digest(sub.endpoint),u.id,JSON.stringify(sub)]);return {ok:true};}
    if(path==='/push/subscription'&&method==='DELETE'){text(b.endpoint,4096,true);await query(c,'DELETE FROM club.subscriptions WHERE id=$1 AND user_id=$2',[digest(b.endpoint),u.id]);return {ok:true};}
    if(path==='/push/native'&&method==='POST'){const sub=validateNativeToken(b.token);await query(c,'INSERT INTO club.subscriptions VALUES($1,$2,$3) ON CONFLICT(id) DO UPDATE SET user_id=excluded.user_id,data=excluded.data',[digest('fcm:'+sub.token),u.id,JSON.stringify(sub)]);return {ok:true};}
