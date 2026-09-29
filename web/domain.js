@@ -92,9 +92,9 @@ function eventFeeSplit(total,occupants){
  return {total,occupants,perPerson,driverReceives:perPerson*Math.max(0,occupants-1)};
 }
 function settlement(s,month,now=today()){
- const lines=new Map();for(const p of s.plans){const e=s.events.find(e=>e.id===p.eventId);if(!e||e.cancelled||p.status==='cancelled'||p.excluded)continue;
+ const lines=new Map();for(const p of s.plans){const e=s.events.find(e=>e.id===p.eventId);if(!e||e.cancelled||p.status!=='registered'||p.excluded)continue;
  const legs=p.fareMode==='event'&&p.linked?['outbound']:['outbound','return'];
- for(const leg of legs){const day=p.legDates?.[leg]|| (leg==='return'?(e.endDate||e.date):e.date);if(!p.enabled[leg]||day>now||day.slice(0,7)!==month)continue;
+ for(const leg of legs){const day=p.legDates?.[leg]|| (leg==='return'?(e.endDate||e.date):e.date);if(!p.enabled[leg]||day.slice(0,7)!==month)continue;
  for(const c of p.legs[leg]){if(!c.driver)continue;
  if(p.fareMode==='event'){
   const cost=p.eventCosts?.[leg]?.[c.id]||{},total=['gasoline','toll','parking','otherTransport','other'].reduce((sum,key)=>sum+(Number.isInteger(cost[key])?cost[key]:0),0);
