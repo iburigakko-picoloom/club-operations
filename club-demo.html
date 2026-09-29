@@ -1843,12 +1843,12 @@ drawCarCanvas=function(id){
 window.ClubApp.drawCarCanvas=(id)=>drawCarCanvas(id);
 function drawScheduleCanvas(id){
  const p=plan(id),e=event(p?.eventId);if(!p||!e)throw Error('配車が見つかりません');
- const pad=28,colW=196,carGap=12,categoryGap=18,legGap=18,probe=document.createElement('canvas').getContext('2d'),font=(n,b=false)=>`${b?'600':'400'} ${n}px sans-serif`;
+ const pad=28,colW=196,carGap=12,categoryGap=18,legGap=18,probe=document.createElement('canvas').getContext('2d'),font=(n,b=false)=>`${b?'600':'400'} ${n}px sans-serif`,imageName=id=>String(pName(id)).replace(/^[\s・･·•●○◦▪]+|[\s・･·•●○◦▪]+$/gu,'');
  const categories=[['university','大学配車'],['station','駅配車']];
  const legs=['outbound','return'].filter(leg=>p.enabled[leg]).map(leg=>({leg,buckets:categories.map(([key,label])=>{
   const cars=(p.legs[leg]||[]).filter(c=>c.pickup===key&&(c.driver||(c.riders||[]).length)).map(car=>{
-   probe.font=font(17,true);const driver=measureLines(probe,car.driver?pName(car.driver):'運転者未定',colW-20);
-   probe.font=font(16);const riders=(car.riders||[]).map(mid=>measureLines(probe,pName(mid),colW-20));
+   probe.font=font(17,true);const driver=measureLines(probe,car.driver?imageName(car.driver):'運転者未定',colW-20);
+   probe.font=font(16);const riders=(car.riders||[]).map(mid=>measureLines(probe,imageName(mid),colW-20));
    return {driver,driverHeight:Math.max(62,driver.length*21+20),riders};
   });
   const carCount=Math.max(1,cars.length),bodyHeight=Math.max(0,...cars.map(car=>car.driverHeight+car.riders.reduce((n,lines)=>n+Math.max(42,lines.length*21+16),0)));
