@@ -15,7 +15,7 @@ def html(demo=True,bridge=False,stored=None):
  shim="""<script>location.hash='home';window.__qaStorage=STORED;for(const name of ['localStorage','sessionStorage']){const data=name==='localStorage'?window.__qaStorage:{};Object.defineProperty(window,name,{value:{getItem:k=>data[k]??null,setItem:(k,v)=>data[k]=String(v),removeItem:k=>delete data[k]}});}</script>""".replace('STORED',json.dumps(stored or {}))
  if bridge:shim+='''<script>window.fetch=async function(url,options={}){const r=await window.__qaRequest(String(url),options);return new Response(r.body,{status:r.status,headers:{'Content-Type':'application/json'}});}</script>'''
  out='<html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+(ROOT/'web/styles.css').read_text()+'</style><body><div class="app" id="app"></div><div id="modal-root"></div><div id="toast-root" aria-live="polite"></div>'+shim
- for script in ['domain.js','base.js','app.js','workflow.js']:
+ for script in ['domain.js','base.js','app.js','workflow.js','calendar.js','experience.js','operations.js']:
   source=(ROOT/'web'/script).read_text()
   if demo:source=source.replace("location.protocol==='file:'||url.searchParams.has('demo')","true")
   out+='<script>'+source+'</script>'
@@ -87,10 +87,12 @@ with sync_playwright() as pw:
  page.evaluate('ClubApp.reset()');visit('car/plan1')
  src=page.locator('[data-person="m9"]');dst=page.locator('[data-drop="passenger"][data-car-id="c2"]');a=src.bounding_box();b=dst.bounding_box();page.mouse.move(a['x']+15,a['y']+15);page.mouse.down();page.mouse.move(b['x']+b['width']/2,b['y']+b['height']/2,steps=15);page.mouse.up();page.wait_for_timeout(70)
  check('real mouse drag moves rider',page.evaluate('plan("plan1").legs.outbound.find(c=>c.id==="c2").riders.includes("m9")'))
- before=page.evaluate('JSON.stringify(state.plans[0])');res=page.evaluate('moveMember("plan1","m11",{kind:"passenger",carId:"c1"})');check('full car rejects atomically',not res['ok'] and page.evaluate('JSON.stringify(state.plans[0])')==before)
- page.evaluate('moveMember("plan1","m11",{kind:"passenger",carId:"c3"});moveMember("plan1","m12",{kind:"passenger",carId:"c3"});render()');check('linked roundtrip equality',page.evaluate('JSON.stringify(plan("plan1").legs.outbound)===JSON.stringify(plan("plan1").legs.return)'))
- page.locator('[data-act="register-car"]').click();page.wait_for_timeout(50);check('register to driver header table',page.locator('.ride-table th').all_text_contents()==['池田','中島','山口'] and '台目' not in page.locator('#share-table').inner_text())
- png=page.evaluate('drawCarCanvas("plan1").toDataURL().split(",")[1]');(OUT/'carpool_export.png').write_bytes(base64.b64decode(png))
+ res=page.evaluate('moveMember("plan1","m11",{kind:"passenger",carId:"c1"})');check('four passenger places are available',res['ok'] and page.evaluate('plan("plan1").legs.outbound[0].riders.length')==4)
+ before=page.evaluate('JSON.stringify(state.plans[0])');res=page.evaluate('moveMember("plan1","m12",{kind:"passenger",carId:"c1"})');check('fifth passenger is rejected at five total occupants',not res['ok'] and page.evaluate('JSON.stringify(state.plans[0])')==before)
+ page.evaluate('moveMember("plan1","m12",{kind:"passenger",carId:"c3"});render()');check('linked roundtrip equality',page.evaluate('JSON.stringify(plan("plan1").legs.outbound)===JSON.stringify(plan("plan1").legs.return)'))
+ check('completion state and share actions are visible',page.locator('.op-car-readiness').inner_text().includes('配車完了') and page.locator('[data-act="op-copy"]').count()==1 and page.locator('[data-act="op-image"]').count()==1 and page.locator('[data-act="op-settings"]').count()==1)
+ visit('car-table/plan1');check('carpool table has driver headers without car numbers',page.locator('.ride-table th').all_text_contents()==['池田','中島','山口'] and '台目' not in page.locator('#share-table').inner_text())
+ png=page.evaluate('drawScheduleCanvas("plan1").toDataURL().split(",")[1]');(OUT/'carpool_export.png').write_bytes(base64.b64decode(png))
  # Driver replacement and missing warning.
  visit('car/plan1');page.evaluate('state.attendance["e1|m14"]=true;moveMember("plan1","m14",{kind:"driver",carId:"c1"});render()');check('driver replacement riders preserved',page.evaluate('plan("plan1").legs.outbound[0].driver==="m14"&&plan("plan1").legs.outbound[0].riders.length===3'))
  page.evaluate('ClubApp.reset()');visit('car/plan1');page.locator('[data-act="person-select"][data-person="m11"]').click();page.locator('[data-drop="passenger"][data-car-id="c3"]').scroll_into_view_if_needed();page.locator('[data-drop="passenger"][data-car-id="c3"]').click();page.wait_for_timeout(50);check('tap fallback moves rider',page.evaluate('plan("plan1").legs.outbound.find(c=>c.id==="c3").riders.includes("m11")'))

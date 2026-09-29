@@ -125,7 +125,7 @@ def view(c,g,u):
 
 def empty_state(gid,name):
     role_names={v for v in MODULES.values() if v not in ['設定','権限','グループ']}|{'会計'}
-    return {'schema':2,'group':{'id':gid,'name':name},'people':[],'events':[],'tasks':[],'notices':[],'plans':[],'venues':[],'equipment':[],'settlements':[], 'attendance':{},'training':{'categories':[],'menus':[],'sheets':[]},'settings':{'unitYen':None,'reminders':['P7D','P1D']},'roles':{v:[] for v in role_names}}
+    return {'schema':2,'group':{'id':gid,'name':name},'people':[],'events':[],'tasks':[],'notices':[],'plans':[],'venues':[],'equipment':[],'settlements':[], 'attendance':{},'training':{'categories':[],'menus':[],'sheets':[]},'settings':{'unitYen':None,'carpoolFees':{'gym':None,'station':None,'university':None},'eventCarpoolEnabled':False,'reminders':['P7D','P1D']},'roles':{v:[] for v in role_names}}
 
 def add_months(d,n):
     y=d.year+(d.month-1+n)//12;m=(d.month-1+n)%12+1
@@ -220,7 +220,9 @@ def validate(s,operators):
         if not e or e['kind']!='club':fail('配車は部活予定に紐付けてください')
         if e['id'] in used_events:fail('この予定の配車はすでにあります')
         used_events.add(e['id']);number(p.get('unitYen'),0,1000000,True)
-        if p.get('status') not in ['draft','registered','cancelled']:fail('配車状態を確認してください')
+        if 'status' in p and p.get('status') not in ['draft','registered','cancelled']:fail('配車状態を確認してください')
+        if p.get('feeType') is not None and p['feeType'] not in ['gym','station','university']:fail('通常配車の種類を確認してください')
+        if p.get('fareMode') is not None and p['fareMode'] not in ['fixed','event']:fail('料金方式を確認してください')
         if not isinstance(p.get('enabled'),dict) or any(type(p['enabled'].get(leg)) is not bool for leg in ['outbound','return']):fail('往復の対象設定を確認してください')
         if not isinstance(p.get('legs'),dict) or any(not isinstance(p['legs'].get(leg),list) for leg in ['outbound','return']):fail('配車の形式を確認してください')
         if not isinstance(p.get('need'),dict) or any(not isinstance(p['need'].get(leg),dict) for leg in ['outbound','return']):fail('配車対象の形式を確認してください')
@@ -233,12 +235,20 @@ def validate(s,operators):
                 cids.add(c.get('id'))
                 if c.get('pickup') not in ['university','station']:fail('配車区分を確認してください')
                 riders=c.get('riders',[]);people=([c['driver']] if c.get('driver') else [])+riders
-                if len(riders)>3 or len(people)>4:fail('運転者を含め4人までです')
+                if len(riders)>4 or len(people)>5:fail('運転者を含め5人までです')
                 for mid in people:
                     if mid not in ps or mid in seen:fail('部員が不明または重複しています')
                     seen.add(mid)
             for mid in p.get('need',{}).get(leg,{}):
                 if mid not in ps:fail('配車対象が不明です')
+            if 'eventCosts' in p:
+                costs=p.get('eventCosts')
+                if not isinstance(costs,dict):fail('イベント実費の形式を確認してください')
+                for car_id,cost in costs.get(leg,{}).items():
+                    if car_id not in cids or not isinstance(cost,dict):fail('イベント実費の車を確認してください')
+                    for key,value in cost.items():
+                        if key not in ['gasoline','toll','parking','otherTransport','other']:fail('イベント実費の項目を確認してください')
+                        number(value,0,1000000)
         if p.get('linked') and (p['legs']['outbound']!=p['legs']['return'] or p.get('need',{}).get('outbound',{})!=p.get('need',{}).get('return',{})):fail('往復のデータが一致しません')
         for key,a in p.get('adjustments',{}).items():
             leg,sep,mid=key.partition('|')
@@ -250,6 +260,11 @@ def validate(s,operators):
     for role,ids in s['roles'].items():
         if not isinstance(ids,list) or any(x not in operators for x in ids):fail('担当者がグループ外です')
     number(s['settings'].get('unitYen'),0,1000000,True)
+    fees=s['settings'].get('carpoolFees')
+    if fees is not None:
+        if not isinstance(fees,dict):fail('通常配車料金の形式を確認してください')
+        for key in ['gym','station','university']:number(fees.get(key),0,1000000,True)
+    if 'eventCarpoolEnabled' in s['settings'] and type(s['settings']['eventCarpoolEnabled']) is not bool:fail('イベント配車の設定を確認してください')
     tr=s.get('training',{});cats={x['id'] for x in tr.get('categories',[])}
     for m in tr.get('menus',[]):
         text(m.get('name'),150,True);number(m.get('seconds'),0,86400)
@@ -439,7 +454,7 @@ async def update_state(gid:str,req:Request):
         for p in s['plans']:
             prior=prior_plans.get(p['id'])
             if p['id'] in locked and p!=prior:fail('精算確定済みです。先に月の確定を解除してください',409)
-            if p!=prior and p['status']=='registered':validate_registered(s,p)
+            # Carpool plans are autosaved; legacy status fields no longer gate validation or use.
         members={m['id']:m for m in s['people']}
         def participating(eid,mid):
             m=members.get(mid)
@@ -453,7 +468,7 @@ async def update_state(gid:str,req:Request):
                     if car.get('driver') and not participating(p['eventId'],car['driver']):car['driver']=None;changed=True
                     riders=[mid for mid in car['riders'] if participating(p['eventId'],mid)]
                     if len(riders)!=len(car['riders']):car['riders']=riders;changed=True
-            if changed:p['status']='draft';p['version']=p.get('version',0)+1
+            if changed:p['version']=p.get('version',0)+1
         old_events={x['id']:x for x in old['events']}
         for p in old['plans']:
             if p['id'] in locked:

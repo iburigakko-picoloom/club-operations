@@ -88,7 +88,7 @@ async function calMoveRecord(type,id,from,to){
  const shift=Math.round((Date.parse(to+'T12:00:00Z')-Date.parse(from+'T12:00:00Z'))/86400000),plans=key==='events'?(state.plans||[]).filter(p=>p.eventId===id):[];
  if(plans.some(p=>lockedPlan(p.id)))throw Error('精算確定済みの予定は移動できません');
  if(plans.length&&!edit('plans'))throw Error('配車がある予定の移動には配車の編集権限も必要です');
- await wfSave(()=>{const start=item.date,end=item.endDate||item.date;item.date=D.addDays(start,shift);if(key==='events'){item.endDate=D.addDays(end,shift);item.seriesId=null;}for(const p of plans){for(const leg of ['outbound','return'])if(p.legDates?.[leg]===start||p.legDates?.[leg]===end)p.legDates[leg]=D.addDays(p.legDates[leg],shift);p.status='draft';p.version=(p.version||0)+1;}D.seedAttendance(state);});
+ await wfSave(()=>{const start=item.date,end=item.endDate||item.date;item.date=D.addDays(start,shift);if(key==='events'){item.endDate=D.addDays(end,shift);item.seriesId=null;}for(const p of plans){for(const leg of ['outbound','return'])if(p.legDates?.[leg]===start||p.legDates?.[leg]===end)p.legDates[leg]=D.addDays(p.legDates[leg],shift);p.version=(p.version||0)+1;}D.seedAttendance(state);});
  toast('日程を変更しました');
 }
 let calPress=null,calPressTimer=null,calGhost=null;

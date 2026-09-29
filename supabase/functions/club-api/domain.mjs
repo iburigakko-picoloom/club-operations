@@ -14,7 +14,7 @@ export const today=()=>new Date(Date.now()+9*3600000).toISOString().slice(0,10);
 export function canonical(x){if(Array.isArray(x))return '['+x.map(canonical).join(',')+']';if(object(x))return '{'+Object.keys(x).sort().map(k=>JSON.stringify(k)+':'+canonical(x[k])).join(',')+'}';return JSON.stringify(x);}
 export const equal=(a,b)=>canonical(a)===canonical(b);
 const without=(x,keys)=>Object.fromEntries(Object.entries(x).filter(([k])=>!keys.includes(k)));
-export function emptyState(id,name){return {schema:2,group:{id,name},people:[],events:[],tasks:[],notices:[],plans:[],venues:[],equipment:[],settlements:[],attendance:{},training:{categories:[],menus:[],sheets:[],history:[]},settings:{unitYen:null,reminders:['P7D','P1D']},roles:Object.fromEntries([...Object.values(MODULES),'会計'].filter(v=>!['設定','権限','グループ'].includes(v)).map(v=>[v,[]]))};}
+export function emptyState(id,name){return {schema:2,group:{id,name},people:[],events:[],tasks:[],notices:[],plans:[],venues:[],equipment:[],settlements:[],attendance:{},training:{categories:[],menus:[],sheets:[],history:[]},settings:{unitYen:null,carpoolFees:{gym:null,station:null,university:null},eventCarpoolEnabled:false,reminders:['P7D','P1D']},roles:Object.fromEntries([...Object.values(MODULES),'会計'].filter(v=>!['設定','権限','グループ'].includes(v)).map(v=>[v,[]]))};}
 export function seedAttendance(s,start=today()){
  const d=new Date(start+'T00:00:00Z'),day=d.getUTCDate();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+3);const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();d.setUTCDate(Math.min(day,last));const end=d.toISOString().slice(0,10);
  for(const e of array(s.events))if(e.kind==='club'&&!e.cancelled&&e.date>=start&&e.date<=end)for(const p of array(s.people))if(p.active!==false&&(p.joinedDate||'0000')<=e.date){const key=e.id+'|'+p.id;if(!(key in dict(s.attendance)))s.attendance[key]=p.defaultOverride??p.seniority==='below';}
@@ -38,16 +38,18 @@ export function validate(s,operators){
  for(const n of s.notices){text(n.title,200,true);text(n.body,20000,true);assignees(n.assignees);if(n.targetRoles)array(n.targetRoles);}
  for(const [k,v] of Object.entries(s.attendance)){const [eid,mid,...extra]=k.split('|');if(extra.length||!es.has(eid)||!ps.has(mid)||typeof v!=='boolean')fail('出欠の対象を確認してください');}
  const usedEvents=new Set();
- for(const p of s.plans){const e=es.get(p.eventId);if(!e||e.kind!=='club')fail('配車は部活予定に紐付けてください');if(usedEvents.has(e.id))fail('この予定の配車はすでにあります');usedEvents.add(e.id);number(p.unitYen,0,1e6,true);if(!['draft','registered','cancelled'].includes(p.status))fail('配車状態を確認してください');
+ for(const p of s.plans){const e=es.get(p.eventId);if(!e||e.kind!=='club')fail('配車は部活予定に紐付けてください');if(usedEvents.has(e.id))fail('この予定の配車はすでにあります');usedEvents.add(e.id);number(p.unitYen,0,1e6,true);if(p.status!==undefined&&!['draft','registered','cancelled'].includes(p.status))fail('配車状態を確認してください');if(p.feeType!==undefined&&!['gym','station','university'].includes(p.feeType))fail('通常配車の種類を確認してください');if(p.fareMode!==undefined&&!['fixed','event'].includes(p.fareMode))fail('料金方式を確認してください');
   if(!object(p.enabled)||['outbound','return'].some(l=>typeof p.enabled[l]!=='boolean'))fail('往復の対象設定を確認してください');dict(p.legs);dict(p.need);
-  for(const leg of ['outbound','return']){const seen=new Set(),ids=new Set();if(p.legDates?.[leg]&&!isdate(p.legDates[leg]))fail('利用日を確認してください');for(const c of array(p.legs[leg])){dict(c);text(c.id,100,true);if(ids.has(c.id))fail('車が重複しています');ids.add(c.id);if(!['university','station'].includes(c.pickup))fail('配車区分を確認してください');const riders=array(c.riders),people=[...(c.driver?[c.driver]:[]),...riders];if(riders.length>3||people.length>4)fail('運転者を含め4人までです');for(const mid of people){if(!ps.has(mid)||seen.has(mid))fail('部員が不明または重複しています');seen.add(mid);}}for(const [mid,value] of Object.entries(dict(p.need[leg])))if(!ps.has(mid)||typeof value!=='boolean')fail('配車対象が不明です');}
+  for(const leg of ['outbound','return']){const seen=new Set(),ids=new Set();if(p.legDates?.[leg]&&!isdate(p.legDates[leg]))fail('利用日を確認してください');for(const c of array(p.legs[leg])){dict(c);text(c.id,100,true);if(ids.has(c.id))fail('車が重複しています');ids.add(c.id);if(!['university','station'].includes(c.pickup))fail('配車区分を確認してください');const riders=array(c.riders),people=[...(c.driver?[c.driver]:[]),...riders];if(riders.length>4||people.length>5)fail('運転者を含め5人までです');for(const mid of people){if(!ps.has(mid)||seen.has(mid))fail('部員が不明または重複しています');seen.add(mid);}}for(const [mid,value] of Object.entries(dict(p.need[leg])))if(!ps.has(mid)||typeof value!=='boolean')fail('配車対象が不明です');
+   if(p.eventCosts!==undefined){const costs=dict(p.eventCosts),vehicles=new Set(p.legs[leg].map(c=>c.id));for(const [carId,cost] of Object.entries(dict(costs[leg]||{}))){if(!vehicles.has(carId))fail('イベント実費の車を確認してください');dict(cost);for(const [key,value] of Object.entries(cost)){if(!['gasoline','toll','parking','otherTransport','other'].includes(key))fail('イベント実費の項目を確認してください');number(value,0,1e6);}}}
+  }
   if(p.linked&&(!equal(p.legs.outbound,p.legs.return)||!equal(p.need.outbound,p.need.return)))fail('往復のデータが一致しません');
   for(const [k,a] of Object.entries(dict(p.adjustments||{}))){const [leg,mid,...rest]=k.split('|');if(rest.length||!['outbound','return'].includes(leg)||!ps.has(mid))fail('精算調整の対象を確認してください');dict(a);number(a.count,0,999,true);number(a.unitYen,0,1e6,true);}
  }
  for(const v of s.venues){text(v.name,120,true);number(v.courts,1,30);}
  for(const i of s.equipment){text(i.name,120,true);number(i.quantity);text(i.unit,20,true);number(i.threshold,0,1e6,true);}
  for(const ids of Object.values(s.roles))assignees(ids);
- number(s.settings.unitYen,0,1e6,true);
+ number(s.settings.unitYen,0,1e6,true);if(s.settings.carpoolFees!==undefined){const fees=dict(s.settings.carpoolFees);for(const key of ['gym','station','university'])number(fees[key],0,1e6,true);if(s.settings.eventCarpoolEnabled!==undefined&&typeof s.settings.eventCarpoolEnabled!=='boolean')fail('イベント配車の設定を確認してください');}
  const tr=s.training,cats=new Set(array(tr.categories).map(x=>{dict(x);text(x.id,100,true);return x.id;}));
  for(const m of array(tr.menus)){dict(m);text(m.name,150,true);number(m.seconds,0,86400);if(!cats.has(m.categoryId))fail('種目の分類を確認してください');}
  for(const sh of array(tr.sheets)){dict(sh);text(sh.title,200,true);if(sh.eventId&&!es.has(sh.eventId))fail('練習予定が見つかりません');if(array(sh.patterns||[4,5],2).some(p=>!Number.isInteger(p)||p<1||p>5))fail('人数パターンを確認してください');for(const row of array(sh.rows||[])){dict(row);text(row.name,150,true);number(row.seconds,0,86400);for(const v of Object.values(dict(row.sets||{})))number(v,0,999);}}
@@ -80,7 +82,7 @@ export function updateState(old,changes,user,owner,gid,operators){
  for(const key of ['events','people'])if(old[key].some(x=>!s[key].some(y=>y.id===x.id)))fail(key==='events'?'予定は削除ではなく中止してください':'部員は削除ではなく在籍状態を変更してください');
  const prior=new Map(old.plans.map(p=>[p.id,p])),locked=new Set(old.settlements.filter(x=>x.locked).flatMap(x=>x.planIds||[]));
  for(const id of locked)if(prior.has(id)&&!s.plans.some(p=>p.id===id))fail('精算確定済みの配車は削除できません。先に月の確定を解除してください',409);
- for(const p of s.plans){if(locked.has(p.id)&&!equal(p,prior.get(p.id)))fail('精算確定済みです。先に月の確定を解除してください',409);if(!equal(p,prior.get(p.id))&&p.status==='registered')validateRegistered(s,p);}
+ for(const p of s.plans){if(locked.has(p.id)&&!equal(p,prior.get(p.id)))fail('精算確定済みです。先に月の確定を解除してください',409);}
  reconcileAbsent(s,s.events.map(e=>e.id));
  for(const p of old.plans)if(locked.has(p.id)&&!equal(s.events.find(e=>e.id===p.eventId),old.events.find(e=>e.id===p.eventId)))fail('精算確定済みの予定は変更できません',409);
  for(const key of ['events','tasks','notices','equipment'])if(Object.hasOwn(changes,key))for(const x of s[key]){const prev=old[key].find(y=>y.id===x.id);if(equal(x,prev))continue;x.updatedAt=new Date().toISOString();x.updatedBy=user.id;if(key==='notices'){x.author=prev?.author??user.name;x.authorId=prev?.authorId??user.id;x.date=prev?.date??today();}if(key==='tasks'||(key==='events'&&x.kind==='executive')){x.completedBy=x.done?user.id:null;x.completedAt=x.done?new Date().toISOString():null;}}
@@ -94,7 +96,7 @@ function reconcileAbsent(s,eventIds){
    if(car.driver&&!attendanceParticipant(s,p.eventId,car.driver)){car.driver=null;changed=true;}
    const riders=car.riders.filter(id=>attendanceParticipant(s,p.eventId,id));if(riders.length!==car.riders.length){car.riders=riders;changed=true;}
   }
-  if(changed){p.status='draft';p.version=(p.version||0)+1;}
+  if(changed){p.version=(p.version||0)+1;}
  }
 }
 function attendanceParticipant(s,eid,mid){const p=s.people.find(p=>p.id===mid);return Boolean(p&&p.active!==false&&(s.attendance[eid+'|'+mid]??p.defaultOverride??p.seniority==='below'));}

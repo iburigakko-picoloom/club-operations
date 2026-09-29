@@ -52,7 +52,7 @@ function reconcileAbsent(s,eventIds){
    if(car.driver&&!participating(s,p.eventId,car.driver)){car.driver=null;changed=true;}
    const riders=car.riders.filter(id=>participating(s,p.eventId,id));if(riders.length!==car.riders.length){car.riders=riders;changed=true;}
   }
-  if(changed){p.status='draft';p.version=(p.version||0)+1;}
+  if(changed){p.version=(p.version||0)+1;}
  }
 }
 function planPeople(car){return [car.driver,...(car.riders||[])].filter(Boolean);}
@@ -60,7 +60,7 @@ function participating(s,eid,mid){const p=s.people.find(p=>p.id===mid);return Bo
 function need(s,p,leg,mid){return p.need?.[leg]?.[mid]??(s.people.find(m=>m.id===mid)?.seniority==='below');}
 function missing(s,p,leg){const used=new Set(p.legs[leg].flatMap(planPeople));return s.people.filter(m=>participating(s,p.eventId,m.id)&&need(s,p,leg,m.id)&&!used.has(m.id)).map(m=>m.id);}
 function planErrors(s,p){const errors=[];if(!p.enabled.outbound&&!p.enabled.return)errors.push('片道を1つ以上有効にしてください');
- for(const leg of ['outbound','return']){if(!p.enabled[leg])continue;const used=new Set();for(const c of p.legs[leg]){if(!c.driver)errors.push('運転者を指定');if(planPeople(c).length>4||c.riders.length>3)errors.push('4人まで');for(const mid of planPeople(c)){if(used.has(mid))errors.push('重複しています');used.add(mid);if(!participating(s,p.eventId,mid))errors.push('不参加の人が含まれています');}}const n=missing(s,p,leg).length;if(n)errors.push(`${leg==='outbound'?'行き':'帰り'}：未配車${n}人`);}
+ for(const leg of ['outbound','return']){if(!p.enabled[leg])continue;const used=new Set();for(const c of p.legs[leg]){if(!c.driver)errors.push('運転者を指定');if(planPeople(c).length>5||c.riders.length>4)errors.push('運転者を含め5人まで');for(const mid of planPeople(c)){if(used.has(mid))errors.push('重複しています');used.add(mid);if(!participating(s,p.eventId,mid))errors.push('不参加の人が含まれています');}}const n=missing(s,p,leg).length;if(n)errors.push(`${leg==='outbound'?'行き':'帰り'}：未配車${n}人`);}
  return [...new Set(errors)];}
 function move(s,p,mid,dest,leg){
  if(!participating(s,p.eventId,mid))throw Error('参加者から選択してください');if(!p.enabled[leg])throw Error('この片道は対象外です');
@@ -68,25 +68,54 @@ function move(s,p,mid,dest,leg){
  const c=cars.find(c=>c.id===dest.carId);
  if(dest.kind==='new')cars.push({id:dest.newId,pickup:dest.pickup,driver:mid,riders:[]});
  else if(dest.kind==='driver'){if(!c)throw Error('車が見つかりません');c.driver=mid;}
- else if(dest.kind==='passenger'){if(!c)throw Error('車が見つかりません');if(c.riders.length>=3)throw Error('4人まで');c.riders.push(mid);}
+ else if(dest.kind==='passenger'){if(!c)throw Error('車が見つかりません');if(c.riders.length>=4)throw Error('同乗者は4人まで');c.riders.push(mid);}
  else if(dest.kind!=='pool')throw Error('移動先を確認してください');
  if(next.linked)next.legs[leg==='outbound'?'return':'outbound']=copy(cars);
- next.status='draft';next.version=(next.version||0)+1;return next;
+ next.version=(next.version||0)+1;return next;
+}
+const EVENT_COST_KEYS=['gasoline','toll','parking','otherTransport','other'];
+function eventCostTotal(cost={}){return EVENT_COST_KEYS.reduce((total,key)=>total+(Number.isInteger(cost[key])?cost[key]:0),0);}
+function mergeEventCosts(p,targetLeg){
+ if(!['outbound','return'].includes(targetLeg))throw Error('行き・帰りを確認してください');
+ const otherLeg=targetLeg==='outbound'?'return':'outbound',targetCars=p.legs?.[targetLeg]||[],merged={};
+ for(const leg of [targetLeg,otherLeg])for(const [carId,cost] of Object.entries(p.eventCosts?.[leg]||{})){
+  if(!eventCostTotal(cost))continue;
+  const sourceCar=p.legs?.[leg]?.find(car=>car.id===carId),targetCar=targetCars.find(car=>car.id===carId)||(sourceCar?.driver?targetCars.find(car=>car.driver===sourceCar.driver):null);
+  if(!targetCar)throw Error('実費を残すため、行き・帰りで同じ運転者の車にまとめてください');
+  merged[targetCar.id]||={};for(const key of EVENT_COST_KEYS)merged[targetCar.id][key]=(merged[targetCar.id][key]||0)+(Number.isInteger(cost[key])?cost[key]:0);
+ }
+ return {outbound:merged,return:{}};
+}
+function eventFeeSplit(total,occupants){
+ if(!Number.isInteger(total)||total<0||!Number.isInteger(occupants)||occupants<1)throw Error('イベント配車の金額と人数を確認してください');
+ const perPerson=Math.round(total/occupants/10)*10;
+ return {total,occupants,perPerson,driverReceives:perPerson*Math.max(0,occupants-1)};
 }
 function settlement(s,month,now=today()){
- const lines=new Map();for(const p of s.plans){const e=s.events.find(e=>e.id===p.eventId);if(!e||e.cancelled||p.status!=='registered'||p.excluded)continue;
- for(const leg of ['outbound','return']){const day=p.legDates?.[leg]||e.date;if(!p.enabled[leg]||day>now||day.slice(0,7)!==month)continue;
- for(const c of p.legs[leg]){if(!c.driver)continue;for(const mid of c.riders){if(mid===c.driver)continue;
+ const lines=new Map();for(const p of s.plans){const e=s.events.find(e=>e.id===p.eventId);if(!e||e.cancelled||p.status==='cancelled'||p.excluded)continue;
+ const legs=p.fareMode==='event'&&p.linked?['outbound']:['outbound','return'];
+ for(const leg of legs){const day=p.legDates?.[leg]|| (leg==='return'?(e.endDate||e.date):e.date);if(!p.enabled[leg]||day>now||day.slice(0,7)!==month)continue;
+ for(const c of p.legs[leg]){if(!c.driver)continue;
+ if(p.fareMode==='event'){
+  const cost=p.eventCosts?.[leg]?.[c.id]||{},total=['gasoline','toll','parking','otherTransport','other'].reduce((sum,key)=>sum+(Number.isInteger(cost[key])?cost[key]:0),0);
+  const occupants=[...new Set([c.driver,...(c.riders||[])].filter(Boolean))];if(total<=0||!occupants.length)continue;
+  const split=eventFeeSplit(total,occupants.length);for(const mid of occupants){if(mid===c.driver||split.perPerson===0)continue;
+   const key=mid+'|'+c.driver,line=lines.get(key)||{rider:mid,driver:c.driver,count:0,amount:0,unset:false,details:[]};
+   line.count++;line.amount+=split.perPerson;line.details.push({planId:p.id,eventId:e.id,date:day,leg,count:1,unitYen:split.perPerson,amount:split.perPerson,fareMode:'event',eventTotal:total,occupants:occupants.length,driverReceives:split.driverReceives,carId:c.id});lines.set(key,line);
+  }
+  continue;
+ }
+ for(const mid of c.riders){if(mid===c.driver)continue;
  const a=p.adjustments?.[leg+'|'+mid]||{};if(a.excluded)continue;const count=a.count??1,price=a.unitYen??p.unitYen;
  const key=mid+'|'+c.driver;let line=lines.get(key)||{rider:mid,driver:c.driver,count:0,amount:0,unset:false,details:[]};
  line.count+=count;line.unset ||= !Number.isFinite(price);if(Number.isFinite(price))line.amount+=count*price;
  line.details.push({planId:p.id,eventId:e.id,date:day,leg,count,unitYen:price,amount:Number.isFinite(price)?count*price:null,reason:a.reason||''});lines.set(key,line);
- }}}
+ }} }
  }return [...lines.values()];}
 function importLegacyTraining(s,data){if(!data||!Array.isArray(data.menus)||!Array.isArray(data.categories))throw Error('メニューのJSONを確認してください');const out=copy(s);out.training ||= {menus:[],categories:[],sheets:[]};let added=0;
  for(const cat of data.categories){if(!cat.id||typeof cat.name!=='string')throw Error('分類が不正です');if(!out.training.categories.some(c=>c.id===cat.id))out.training.categories.push({id:cat.id,name:cat.name});}
  for(const menu of data.menus){const seconds=menu.seconds??Number(menu.minutes||0)*60;if(!menu.id||!menu.name||!Number.isInteger(seconds)||seconds<0)throw Error('種目が不正です');if(!out.training.menus.some(m=>m.id===menu.id)){out.training.menus.push({id:menu.id,name:menu.name,categoryId:menu.categoryId,seconds,requiresSets:menu.requiresSets!==false});added++;}}
  return {state:out,added};}
-root.ClubDomain={copy,validDate,validTime,addDays,addMonths,today,secondsText,defaultAttendance,seedAttendance,datesFor,calendarItems,trainingTotals,reconcileAbsent,planPeople,participating,need,missing,planErrors,move,settlement,importLegacyTraining};
+root.ClubDomain={copy,validDate,validTime,addDays,addMonths,today,secondsText,defaultAttendance,seedAttendance,datesFor,calendarItems,trainingTotals,reconcileAbsent,planPeople,participating,need,missing,planErrors,move,eventFeeSplit,mergeEventCosts,settlement,importLegacyTraining};
 if(typeof module!=='undefined')module.exports=root.ClubDomain;
 })(typeof globalThis!=='undefined'?globalThis:this);

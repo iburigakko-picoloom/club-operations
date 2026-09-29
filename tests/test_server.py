@@ -20,7 +20,7 @@ def create(c,r,name='検証用の部活'):
 def patch(c,u,s,changes):return c.patch('/api/groups/'+s['group']['id']+'/state',json={'version':s['version'],'changes':changes},headers=auth(u))
 def get(c,gid):return c.get('/api/groups/'+gid+'/state').json()
 def populate(c,u,s):
- today=module.now().date().isoformat();people=[{'id':f'm{i}','name':f'部員{i}','grade':3 if i else 4,'seniority':'below' if i else 'above','pickup':'university','active':True,'defaultOverride':None} for i in range(4)]
+ today=module.now().date().isoformat();people=[{'id':f'm{i}','name':f'部員{i}','grade':3 if i else 4,'seniority':'below' if i else 'above','pickup':'university','active':True,'defaultOverride':None} for i in range(6)]
  event={'id':'e','title':'練習','kind':'club','date':today,'start':'19:00','end':'21:00','venueId':'v','assignees':[]}
  changes={'people':people,'events':[event],'venues':[{'id':'v','name':'体育館','courts':4,'memo':''}]}
  res=patch(c,u,s,changes);assert res.status_code==200,res.text;return res.json()
@@ -82,18 +82,29 @@ def test_unknown_keys_id_tampering(env):
  assert patch(env,u,s,{'group':{'id':'foreign','name':'h'}}).status_code==403
 
 def test_car_capacity_and_unique(env):
- u=account(env);s=populate(env,u,create(env,u));p=make_plan();p['legs']['outbound'][0]['riders'].append('m2');p['legs']['return']=copy.deepcopy(p['legs']['outbound'])
+ u=account(env);s=populate(env,u,create(env,u));p=make_plan();p['legs']['outbound'][0]['riders']=['m1','m2','m3','m4'];p['legs']['return']=copy.deepcopy(p['legs']['outbound'])
+ r=patch(env,u,s,{'plans':[p]});assert r.status_code==200,r.text;s=r.json();p=s['plans'][0];p['legs']['outbound'][0]['riders'].append('m5');p['legs']['return']=copy.deepcopy(p['legs']['outbound'])
  assert patch(env,u,s,{'plans':[p]}).status_code==400
  p=make_plan();p['legs']['outbound'][0]['riders']=['m1','m1'];p['legs']['return']=copy.deepcopy(p['legs']['outbound'])
  assert patch(env,u,s,{'plans':[p]}).status_code==400
 
-def test_car_registration_absent_missing(env):
- u=account(env);s=populate(env,u,create(env,u));p=make_plan();p['status']='registered'
- assert patch(env,u,s,{'plans':[p]}).status_code==400
- attendance=s['attendance'];attendance['e|m0']=True
- r=patch(env,u,s,{'attendance':attendance,'plans':[p]});assert r.status_code==200,r.text
- s=r.json();p=s['plans'][0];p['legs']['outbound'][0]['riders'].remove('m1');p['legs']['return']=copy.deepcopy(p['legs']['outbound'])
- assert patch(env,u,s,{'plans':[p]}).status_code==400
+def test_car_autosave_accepts_partial_plan_and_removes_absent_people(env):
+ u=account(env);s=populate(env,u,create(env,u));p=make_plan();p.pop('status')
+ r=patch(env,u,s,{'plans':[p]});assert r.status_code==200,r.text;s=r.json();assert 'status' not in s['plans'][0]
+ attendance=s['attendance'];attendance['e|m0']=False
+ r=patch(env,u,s,{'attendance':attendance});assert r.status_code==200,r.text
+ s=r.json();saved=s['plans'][0];assert saved['legs']['outbound'][0]['driver'] is None
+ saved['legs']['outbound'][0]['riders'].remove('m1');saved['legs']['return']=copy.deepcopy(saved['legs']['outbound'])
+ assert patch(env,u,s,{'plans':[saved]}).status_code==200
+
+def test_event_costs_and_per_type_defaults(env):
+ u=account(env);s=populate(env,u,create(env,u));p=make_plan();p['fareMode']='event';p['feeType']='station';p['eventCosts']={'outbound':{'c':{'gasoline':4000,'toll':6000,'parking':1000}},'return':{}}
+ settings={**s['settings'],'carpoolFees':{'gym':300,'station':500,'university':400},'eventCarpoolEnabled':True}
+ r=patch(env,u,s,{'plans':[p],'settings':settings});assert r.status_code==200,r.text;s=r.json();assert s['settings']['carpoolFees']['station']==500;assert s['settings']['eventCarpoolEnabled'] is True;assert s['plans'][0]['eventCosts']['outbound']['c']['toll']==6000
+ bad=copy.deepcopy(s['plans'][0]);bad['eventCosts']['outbound']['c']['gasoline']=-1
+ assert patch(env,u,s,{'plans':[bad]}).status_code==400
+ settings={**s['settings'],'eventCarpoolEnabled':'yes'}
+ assert patch(env,u,s,{'settings':settings}).status_code==400
 
 def test_leg_mirror(env):
  u=account(env);s=populate(env,u,create(env,u));p=make_plan();p['legs']['return'][0]['riders']=[]
