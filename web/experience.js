@@ -52,8 +52,6 @@ function drawScheduleCanvas(id){
  const pad=28,colW=176,carGap=8,categoryGap=16,probe=document.createElement('canvas').getContext('2d'),font=(n,b=false)=>`${b?'600':'400'} ${n}px sans-serif`,imageName=id=>String(pName(id)).replace(/^[\s・･·•●○◦▪]+|[\s・･·•●○◦▪]+$/gu,'');
  const categories=[['university','大学配車'],['station','駅配車']];
  const legs=['outbound','return'].filter(leg=>p.enabled[leg]);
- const allDirections=new Map();
- for(const leg of legs)for(const car of p.legs[leg]||[])for(const personId of [car.driver,...(car.riders||[])])if(personId){let directions=allDirections.get(personId);if(!directions){directions=new Set();allDirections.set(personId,directions);}directions.add(leg);}
  const buckets=categories.map(([key,label])=>{
   const carsById=new Map();
   for(const leg of legs)for(const car of p.legs[leg]||[]){
@@ -63,7 +61,7 @@ function drawScheduleCanvas(id){
    add(merged.drivers,car.driver);for(const rider of car.riders||[])add(merged.riders,rider);
   }
   const cars=[...carsById.values()].map(car=>{
-   const personRows=(people,bold)=>[...people].map(([id,directions])=>{const all=allDirections.get(id)||directions,direction=all.size===1?(all.has('outbound')?'行き':'帰り'):'';probe.font=font(bold?17:16,bold);const lines=measureLines(probe,imageName(id),colW-(direction?58:20));return {lines,direction};});
+   const personRows=(people,bold)=>[...people].map(([id,directions])=>{const direction=directions.size===1?(directions.has('outbound')?'行き':'帰り'):'';probe.font=font(bold?17:16,bold);const lines=measureLines(probe,imageName(id),colW-(direction?58:20));return {lines,direction};});
    const drivers=personRows(car.drivers,true),riders=personRows(car.riders,false);
    const driverHeight=Math.max(56,drivers.reduce((n,row)=>n+Math.max(24,row.lines.length*21+8),0));
    const riderHeights=riders.map(row=>Math.max(42,row.lines.length*21+16));
