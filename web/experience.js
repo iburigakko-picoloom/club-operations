@@ -49,16 +49,17 @@ drawCarCanvas=function(id){
 window.ClubApp.drawCarCanvas=(id)=>drawCarCanvas(id);
 function drawScheduleCanvas(id){
  const p=plan(id),e=event(p?.eventId);if(!p||!e)throw Error('配車が見つかりません');
- const pad=28,colW=196,carGap=12,categoryGap=18,carRowGap=14,probe=document.createElement('canvas').getContext('2d'),font=(n,b=false)=>`${b?'600':'400'} ${n}px sans-serif`,imageName=id=>String(pName(id)).replace(/^[\s・･·•●○◦▪]+|[\s・･·•●○◦▪]+$/gu,'');
+ const pad=28,colW=176,carGap=8,categoryGap=16,probe=document.createElement('canvas').getContext('2d'),font=(n,b=false)=>`${b?'600':'400'} ${n}px sans-serif`,imageName=id=>String(pName(id)).replace(/^[\s・･·•●○◦▪]+|[\s・･·•●○◦▪]+$/gu,'');
  const categories=[['university','大学配車'],['station','駅配車']];
  const legs=['outbound','return'].filter(leg=>p.enabled[leg]);
  const allDirections=new Map();
+ for(const leg of legs)for(const car of p.legs[leg]||[])for(const personId of [car.driver,...(car.riders||[])])if(personId){let directions=allDirections.get(personId);if(!directions){directions=new Set();allDirections.set(personId,directions);}directions.add(leg);}
  const buckets=categories.map(([key,label])=>{
   const carsById=new Map();
   for(const leg of legs)for(const car of p.legs[leg]||[]){
    if(car.pickup!==key||(!car.driver&&!(car.riders||[]).length))continue;
    const id=String(car.id||`${key}:${car.driver||'car'}`);let merged=carsById.get(id);if(!merged){merged={id,drivers:new Map(),riders:new Map()};carsById.set(id,merged);}
-   const add=(map,personId)=>{if(!personId)return;let directions=map.get(personId);if(!directions){directions=new Set();map.set(personId,directions);}directions.add(leg);let all=allDirections.get(personId);if(!all){all=new Set();allDirections.set(personId,all);}all.add(leg);};
+   const add=(map,personId)=>{if(!personId)return;let directions=map.get(personId);if(!directions){directions=new Set();map.set(personId,directions);}directions.add(leg);};
    add(merged.drivers,car.driver);for(const rider of car.riders||[])add(merged.riders,rider);
   }
   const cars=[...carsById.values()].map(car=>{
@@ -68,13 +69,12 @@ function drawScheduleCanvas(id){
    const riderHeights=riders.map(row=>Math.max(42,row.lines.length*21+16));
    return {drivers,riders,driverHeight,riderHeights,height:driverHeight+riderHeights.reduce((a,b)=>a+b,0)};
   });
-  const rowCount=Math.max(1,Math.ceil(cars.length/2)),rowHeights=Array.from({length:rowCount},(_,i)=>Math.max(48,...cars.slice(i*2,i*2+2).map(car=>car.height)));
-  const width=Math.max(1,Math.min(2,cars.length||1))*colW+(Math.min(2,cars.length||1)-1)*carGap;
-  const bodyHeight=cars.length?rowHeights.reduce((n,h)=>n+h,0)+Math.max(0,rowCount-1)*carRowGap:48;
-  return {key,label,cars,width,rowHeights,bodyHeight};
+  const columns=Math.max(1,cars.length),width=columns*colW+(columns-1)*carGap;
+  const bodyHeight=Math.max(48,...cars.map(car=>car.height));
+  return {key,label,cars,width,bodyHeight};
  });
  const gridWidth=buckets.reduce((n,b)=>n+b.width,0)+categoryGap;
- const width=Math.max(520,pad*2+gridWidth);
+ const width=Math.max(440,pad*2+gridWidth);
  const height=pad*2+38+Math.max(48,...buckets.map(b=>b.bodyHeight));
  if(width>8000||height>12000)throw Error('画像にするデータが大きすぎます');
  const [cv,c]=imageCanvas(width,height);c.fillStyle='#fff';c.fillRect(0,0,width,height);c.fillStyle='#14813b';c.fillRect(0,0,width,10);
@@ -85,17 +85,14 @@ function drawScheduleCanvas(id){
  let x=pad+(width-pad*2-gridWidth)/2;const headingY=pad,bodyTop=pad+38;
  for(const [index,bucket] of buckets.entries()){
   c.fillStyle='#eaf4ec';c.fillRect(x,headingY,bucket.width,32);c.fillStyle='#26392b';c.font=font(17,true);c.textAlign='center';c.fillText(bucket.label,x+bucket.width/2,headingY+22);c.textAlign='left';
-  for(let rowIndex=0;rowIndex<bucket.rowHeights.length;rowIndex++){
-   const rowY=bodyTop+bucket.rowHeights.slice(0,rowIndex).reduce((a,b)=>a+b,0)+rowIndex*carRowGap;
-   bucket.cars.slice(rowIndex*2,rowIndex*2+2).forEach((car,i)=>{
-    const cx=x+i*(colW+carGap);let cy=rowY;c.fillStyle='#eaf4ec';c.fillRect(cx,cy,colW,car.driverHeight);c.strokeStyle='#cbd9cd';c.strokeRect(cx,cy,colW,car.driverHeight);
-    if(car.drivers.length){let dy=cy+24;for(const driver of car.drivers){textWithDirection(driver,cx+10,dy,17,true,21);dy+=Math.max(24,driver.lines.length*21+8);}}
-    else{c.font=font(15);c.fillStyle='#68746c';c.fillText('運転者未定',cx+10,cy+25);}
-    cy+=car.driverHeight;
-    car.riders.forEach((rider,row)=>{const rowH=car.riderHeights[row];c.fillStyle='#fff';c.fillRect(cx,cy,colW,rowH);c.strokeStyle='#d9e2da';c.strokeRect(cx,cy,colW,rowH);textWithDirection(rider,cx+10,cy+25,16,false,21);cy+=rowH;});
-   });
-  }
-  c.fillStyle='#d7e2d9';c.fillRect(x+bucket.width+categoryGap/2,headingY,1,height-pad-headingY);x+=bucket.width+categoryGap;
+  bucket.cars.forEach((car,i)=>{
+   const cx=x+i*(colW+carGap);let cy=bodyTop;c.fillStyle='#eaf4ec';c.fillRect(cx,cy,colW,car.driverHeight);c.strokeStyle='#cbd9cd';c.strokeRect(cx,cy,colW,car.driverHeight);
+   if(car.drivers.length){let dy=cy+24;for(const driver of car.drivers){textWithDirection(driver,cx+10,dy,17,true,21);dy+=Math.max(24,driver.lines.length*21+8);}}
+   else{c.font=font(15);c.fillStyle='#68746c';c.fillText('運転者未定',cx+10,cy+25);}
+   cy+=car.driverHeight;
+   car.riders.forEach((rider,row)=>{const rowH=car.riderHeights[row];c.fillStyle='#fff';c.fillRect(cx,cy,colW,rowH);c.strokeStyle='#d9e2da';c.strokeRect(cx,cy,colW,rowH);textWithDirection(rider,cx+10,cy+25,16,false,21);cy+=rowH;});
+  });
+  if(index<buckets.length-1){c.fillStyle='#d7e2d9';c.fillRect(x+bucket.width+categoryGap/2,headingY,1,height-pad-headingY);}x+=bucket.width+categoryGap;
  }
  return cv;
 }
