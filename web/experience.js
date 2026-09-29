@@ -49,27 +49,36 @@ drawCarCanvas=function(id){
 window.ClubApp.drawCarCanvas=(id)=>drawCarCanvas(id);
 function drawScheduleCanvas(id){
  const p=plan(id),e=event(p?.eventId);if(!p||!e)throw Error('配車が見つかりません');
- const pad=40,colW=190,gap=22,probe=document.createElement('canvas').getContext('2d'),font=(n,b=false)=>`${b?'600':'400'} ${n}px sans-serif`;
- const people=participants(e.id).map(m=>m.name),peopleLines=[];probe.font=font(17);for(const name of people)peopleLines.push(...measureLines(probe,name,880));
- const legs=['outbound','return'].filter(leg=>p.enabled[leg]);
- const sections=legs.map(leg=>{const cars=['university','station'].flatMap(key=>p.legs[leg].filter(c=>c.pickup===key&&(c.driver||c.riders.length)).map(c=>({...c,pickupLabel:key==='university'?'大学配車':'駅配車'})));return {leg,cars};});
- const carCount=Math.max(1,...sections.map(s=>s.cars.length)),width=Math.max(900,pad*2+carCount*colW+Math.max(0,carCount-1)*gap);
- probe.font=font(25,true);const titleLines=measureLines(probe,e.title||'部活予定',width-pad*2);
- probe.font=font(16);const meta=[`${jpDate(e.date,true)}${e.endDate&&e.endDate!==e.date?'〜'+jpDate(e.endDate,true):''}${e.start?'　'+e.start+(e.end?'〜'+e.end:''):''}`,eventVenue(e)?.name||'',e.memo||''].filter(Boolean),metaLines=meta.flatMap(line=>measureLines(probe,line,width-pad*2));
- const blocks=sections.map(section=>{const names=section.cars.map(c=>({driver:measureLines(probe,c.driver?pName(c.driver):'運転者未定',colW-24),riders:c.riders.flatMap(mid=>measureLines(probe,pName(mid),colW-24))}));const rows=Math.max(1,...names.map(c=>Math.ceil(c.riders.length/2)));const feeLines=p.fareMode==='event'?(p.linked&&section.leg==='return'&&section.cars.length?['イベント実費は往復合計']:section.cars.map(car=>{const cost=p.eventCosts?.[section.leg]?.[car.id]||{},sum=['gasoline','toll','parking','otherTransport','other'].reduce((n,key)=>n+(Number.isInteger(cost[key])?cost[key]:0),0),occupants=new Set([car.driver,...car.riders].filter(Boolean)).size,split=sum&&occupants?D.eventFeeSplit(sum,occupants):null;return `${pName(car.driver)}　実費 ${money(sum)}${split?`　1人 ${money(split.perPerson)}　運転者受取 ${money(split.driverReceives)}`:''}`;})):section.cars.length?[...new Set(section.cars.map(car=>car.pickup))].map(key=>{const car=section.cars.find(item=>item.pickup===key),yen=D.fixedCarFee(state,p,car);return `${key==='university'?'大学':'駅'}配車　片道 ${Number.isInteger(yen)?money(yen):'未設定'} / 人`;}):[];probe.font=font(13);const footerLines=feeLines.flatMap(line=>measureLines(probe,line,width-pad*2-8));return {...section,names,rows,headerH:Math.max(58,...names.map(c=>c.driver.length*22+22)),rowH:rows*38,footerLines};});
- const participantH=peopleLines.length?36+peopleLines.length*24:0,memo=e.contactMemo||e.memo||p.memo||'';probe.font=font(15);const memoLines=memo?measureLines(probe,'連絡事項: '+memo,width-pad*2):[];
- const blockHeight=b=>42+(b.cars.length?b.headerH+b.rowH+10:46)+b.footerLines.length*22+14;
- const height=pad+34+titleLines.length*32+metaLines.length*24+participantH+blocks.reduce((n,b)=>n+blockHeight(b),0)+memoLines.length*22+pad+20;if(width>8000||height>12000)throw Error('画像にするデータが大きすぎます');
- const [cv,c]=imageCanvas(width,height);c.fillStyle='#14813b';c.fillRect(0,0,width,12);let y=pad+28;c.fillStyle='#18211c';c.font=font(25,true);titleLines.forEach(line=>{c.fillText(line,pad,y);y+=32;});c.font=font(16);c.fillStyle='#46564b';metaLines.forEach(line=>{c.fillText(line,pad,y);y+=24;});
- if(peopleLines.length){y+=12;c.fillStyle='#eaf4ec';c.fillRect(pad,y,width-pad*2,34+peopleLines.length*24);c.fillStyle='#246b38';c.font=font(15,true);c.fillText(`参加者 ${people.length}人`,pad+12,y+22);c.fillStyle='#26332a';c.font=font(15);peopleLines.forEach((line,i)=>c.fillText(line,pad+132,y+22+i*24));y+=34+peopleLines.length*24+16;}
- for(const b of blocks){const isOut=b.leg==='outbound',label=isOut?'行き':'帰り',day=p.legDates?.[b.leg]||(isOut?e.date:(e.endDate||e.date));c.fillStyle='#e8f4eb';c.fillRect(pad,y,width-pad*2,36);c.fillStyle='#176d35';c.font=font(20,true);c.fillText(`${label}　${jpDate(day)}`,pad+12,y+25);y+=42;
-  if(!b.cars.length){c.fillStyle='#68746c';c.font=font(16);c.fillText('配車なし',pad+8,y+24);y+=46;}
-  else{const top=y;for(let i=0;i<b.cars.length;i++){const car=b.cars[i],x=pad+i*(colW+gap),driver=b.names[i].driver;c.fillStyle='#f2f7f3';c.fillRect(x,y,colW,b.headerH);c.strokeStyle='#bdcfbf';c.strokeRect(x,y,colW,b.headerH);c.fillStyle='#526457';c.font=font(12);c.fillText(car.pickupLabel,x+10,y+17);c.fillStyle='#17251b';c.font=font(18,true);driver.forEach((line,j)=>c.fillText(line,x+10,y+42+j*22));let cy=y+b.headerH;for(let row=0;row<b.rows;row++){c.fillStyle='#fff';c.fillRect(x,cy,colW,38);c.strokeStyle='#d9e2da';c.strokeRect(x,cy,colW,38);const lines=b.names[i].riders.slice(row*2,row*2+2);c.fillStyle='#26332a';c.font=font(15);lines.forEach((line,j)=>c.fillText(line,x+10,cy+24+j*17));cy+=38;} }
-   y=top+b.headerH+b.rowH+8;c.fillStyle='#405447';c.font=font(13);for(const line of b.footerLines){c.fillText(line,pad+4,y);y+=22;}
+ const pad=28,colW=196,carGap=12,categoryGap=18,legGap=18,probe=document.createElement('canvas').getContext('2d'),font=(n,b=false)=>`${b?'600':'400'} ${n}px sans-serif`;
+ const categories=[['university','大学配車'],['station','駅配車']];
+ const legs=['outbound','return'].filter(leg=>p.enabled[leg]).map(leg=>({leg,buckets:categories.map(([key,label])=>{
+  const cars=(p.legs[leg]||[]).filter(c=>c.pickup===key&&(c.driver||(c.riders||[]).length)).map(car=>{
+   probe.font=font(17,true);const driver=measureLines(probe,car.driver?pName(car.driver):'運転者未定',colW-20);
+   probe.font=font(16);const riders=(car.riders||[]).map(mid=>measureLines(probe,pName(mid),colW-20));
+   return {driver,driverHeight:Math.max(62,driver.length*21+20),riders};
+  });
+  const carCount=Math.max(1,cars.length),bodyHeight=Math.max(0,...cars.map(car=>car.driverHeight+car.riders.reduce((n,lines)=>n+Math.max(42,lines.length*21+16),0)));
+  return {key,label,cars,width:carCount*colW+(carCount-1)*carGap,bodyHeight};
+ })}));
+ const sectionWidth=section=>section.buckets.reduce((n,b)=>n+b.width,0)+categoryGap;
+ const width=Math.max(520,pad*2,...legs.map(section=>pad*2+sectionWidth(section)));
+ const height=pad*2+legs.reduce((n,section)=>n+50+38+Math.max(48,...section.buckets.map(b=>b.bodyHeight))+legGap,0);
+ if(width>8000||height>12000)throw Error('画像にするデータが大きすぎます');
+ const [cv,c]=imageCanvas(width,height);c.fillStyle='#fff';c.fillRect(0,0,width,height);c.fillStyle='#14813b';c.fillRect(0,0,width,10);let y=pad;
+ for(const section of legs){
+  c.fillStyle='#e8f4eb';c.fillRect(pad,y,width-pad*2,42);c.fillStyle='#176d35';c.font=font(22,true);c.fillText(section.leg==='outbound'?'行き':'帰り',pad+14,y+29);y+=50;
+  let x=pad+(width-pad*2-sectionWidth(section))/2;const bodyTop=y+38,bodyHeight=Math.max(48,...section.buckets.map(b=>b.bodyHeight));
+  for(const [index,bucket] of section.buckets.entries()){
+   const groupW=bucket.width;c.fillStyle='#f5f8f5';c.fillRect(x,y,groupW,32);c.fillStyle='#26392b';c.font=font(17,true);c.textAlign='center';c.fillText(bucket.label,x+groupW/2,y+22);c.textAlign='left';
+   c.fillStyle='#d7e2d9';c.fillRect(x+groupW,y,1,bodyHeight+38);
+   bucket.cars.forEach((car,i)=>{
+    const cx=x+i*(colW+carGap);let cy=bodyTop;c.fillStyle='#eaf4ec';c.fillRect(cx,cy,colW,car.driverHeight);c.strokeStyle='#cbd9cd';c.strokeRect(cx,cy,colW,car.driverHeight);c.fillStyle='#17251b';c.font=font(17,true);car.driver.forEach((line,j)=>c.fillText(line,cx+10,cy+25+j*21));cy+=car.driverHeight;
+    for(const lines of car.riders){const rowH=Math.max(42,lines.length*21+16);c.fillStyle='#fff';c.fillRect(cx,cy,colW,rowH);c.strokeStyle='#d9e2da';c.strokeRect(cx,cy,colW,rowH);c.fillStyle='#26332a';c.font=font(16);lines.forEach((line,j)=>c.fillText(line,cx+10,cy+25+j*21));cy+=rowH;}
+   });
+   x+=groupW+(index===0?categoryGap:0);
   }
-  y+=14;
+  y+=bodyHeight+legGap;
  }
- if(memoLines.length){c.fillStyle='#8a2c24';c.font=font(15);memoLines.forEach(line=>{c.fillText(line,pad,y);y+=22;});}
  return cv;
 }
 window.ClubApp.drawScheduleCanvas=(id)=>drawScheduleCanvas(id);
