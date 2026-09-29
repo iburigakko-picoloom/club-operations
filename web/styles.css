@@ -467,11 +467,11 @@ body[data-screen="car"] .app{max-width:1100px}
 .op-plan-state button{min-width:44px;height:34px;padding:0 7px;color:#52675a;font-size:10px;line-height:1;white-space:nowrap}
 .op-plan-state button+button{border-left:1px solid #b9d6c0}
 .op-plan-state button.active{background:var(--green);color:#fff;font-weight:700}
-.op-car-editor>.op-car-columns{flex:0 0 226px;min-height:226px}
+.op-car-editor>.op-car-columns{flex:0 0 214px;min-height:214px}
 .op-car-editor .op-riders>.person,.op-car-editor .op-riders>.empty-seat{flex:1 1 0;min-height:27px;height:auto;padding:3px 5px;font-size:12px}
 .op-car-editor .op-riders>.person .person-name{font-size:14px;line-height:1.05}
 .op-car-editor.has-event-expenses{height:auto;min-height:calc(100dvh - 58px - var(--nav-h) - var(--app-safe-bottom, env(safe-area-inset-bottom)));overflow:visible;padding-bottom:calc(90px + var(--app-safe-bottom, env(safe-area-inset-bottom)))}
-.op-car-editor.has-event-expenses>.op-car-columns{flex:0 0 226px}
+.op-car-editor.has-event-expenses>.op-car-columns{flex:0 0 214px}
 .op-car-editor.has-event-expenses>.op-pool{flex:0 0 210px;min-height:190px}
 .op-event-expenses{flex:0 0 auto;padding:14px 10px;margin-top:14px;border:1px solid var(--line);border-radius:6px;background:#fff}
 .op-event-expenses>h3{font-size:15px;margin-bottom:5px}
@@ -487,4 +487,13 @@ body[data-screen="car"] .app{max-width:1100px}
 .op-car-setting-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:0 0 14px}
 .op-car-setting-links .secondary{min-height:38px;padding:0 4px;font-size:11px;white-space:nowrap}
 .op-car-section-title{margin:14px 0 16px}
+.op-car-editor .op-car-heading{height:34px}
+.op-car-editor .op-car-heading .driver-slot{height:100%;min-height:0;display:flex;align-items:center}
+.op-car-editor .op-car-heading .op-driver-name,.op-car-editor .op-car-heading .op-empty-driver{height:28px;min-height:28px;max-height:28px;margin:3px 4px;padding:1px 2px}
+.op-car-editor .op-car-heading .op-driver-name{gap:0}
+.op-car-editor .op-car-heading .op-driver-name .person-name{font-size:14px;line-height:16px}
+.op-car-editor .op-car-heading .op-driver-name small{font-size:8px;line-height:9px}
+.op-car-editor .op-car-heading .op-empty-driver{font-size:13px}
+.op-car-editor .op-people-grid{grid-template-rows:repeat(4,34px);gap:4px}
+.op-car-editor .op-pool .op-people-grid .person{height:28px;min-height:28px;margin:3px 0;padding:2px 5px}
 @media(max-width:370px){.op-header-action{min-width:34px;font-size:8px}.op-plan-state button{min-width:40px;padding:0 5px;font-size:9px}.op-expense-grid{gap:0 7px}}
