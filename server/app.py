@@ -219,7 +219,7 @@ def validate(s,operators):
         e=es.get(p.get('eventId'))
         if not e or e['kind']!='club':fail('配車は部活予定に紐付けてください')
         if e['id'] in used_events:fail('この予定の配車はすでにあります')
-        used_events.add(e['id']);number(p.get('unitYen'),0,1000000,True)
+        used_events.add(e['id']);number(p.get('unitYen'),0,1000000,True);number(p.get('unitYenOverride'),0,1000000,True)
         if 'status' in p and p.get('status') not in ['draft','registered','cancelled']:fail('配車状態を確認してください')
         if p.get('feeType') is not None and p['feeType'] not in ['gym','station','university']:fail('通常配車の種類を確認してください')
         if p.get('fareMode') is not None and p['fareMode'] not in ['fixed','event']:fail('料金方式を確認してください')

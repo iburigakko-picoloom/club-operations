@@ -98,11 +98,13 @@ def test_car_autosave_accepts_partial_plan_and_removes_absent_people(env):
  assert patch(env,u,s,{'plans':[saved]}).status_code==200
 
 def test_event_costs_and_per_type_defaults(env):
- u=account(env);s=populate(env,u,create(env,u),member_count=6);p=make_plan();p['fareMode']='event';p['feeType']='station';p['eventCosts']={'outbound':{'c':{'gasoline':4000,'toll':6000,'parking':1000}},'return':{}}
+ u=account(env);s=populate(env,u,create(env,u),member_count=6);p=make_plan();p['fareMode']='event';p['feeType']='station';p['unitYenOverride']=250;p['eventCosts']={'outbound':{'c':{'gasoline':4000,'toll':6000,'parking':1000}},'return':{}}
  settings={**s['settings'],'carpoolFees':{'gym':300,'station':500,'university':400},'eventCarpoolEnabled':True}
- r=patch(env,u,s,{'plans':[p],'settings':settings});assert r.status_code==200,r.text;s=r.json();assert s['settings']['carpoolFees']['station']==500;assert s['settings']['eventCarpoolEnabled'] is True;assert s['plans'][0]['eventCosts']['outbound']['c']['toll']==6000
+ r=patch(env,u,s,{'plans':[p],'settings':settings});assert r.status_code==200,r.text;s=r.json();assert s['settings']['carpoolFees']['station']==500;assert s['settings']['eventCarpoolEnabled'] is True;assert s['plans'][0]['eventCosts']['outbound']['c']['toll']==6000;assert s['plans'][0]['unitYenOverride']==250
  bad=copy.deepcopy(s['plans'][0]);bad['eventCosts']['outbound']['c']['gasoline']=-1
  assert patch(env,u,s,{'plans':[bad]}).status_code==400
+ bad_rate=copy.deepcopy(s['plans'][0]);bad_rate['unitYenOverride']=-1
+ assert patch(env,u,s,{'plans':[bad_rate]}).status_code==400
  settings={**s['settings'],'eventCarpoolEnabled':'yes'}
  assert patch(env,u,s,{'settings':settings}).status_code==400
 

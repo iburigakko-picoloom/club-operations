@@ -91,6 +91,13 @@ function eventFeeSplit(total,occupants){
  const perPerson=Math.round(total/occupants/10)*10;
  return {total,occupants,perPerson,driverReceives:perPerson*Math.max(0,occupants-1)};
 }
+function fixedCarFee(s,p,c){
+ const override=p.unitYenOverride;
+ if(Number.isInteger(override))return override;
+ const categoryFee=s.settings?.carpoolFees?.[c?.pickup];
+ if(Number.isInteger(categoryFee))return categoryFee;
+ return p.unitYen??s.settings?.unitYen??s.settings?.carpoolFees?.gym??null;
+}
 function settlement(s,month,now=today()){
  const lines=new Map();for(const p of s.plans){const e=s.events.find(e=>e.id===p.eventId);if(!e||e.cancelled||p.status!=='registered'||p.excluded)continue;
  const legs=p.fareMode==='event'&&p.linked?['outbound']:['outbound','return'];
@@ -106,7 +113,7 @@ function settlement(s,month,now=today()){
   continue;
  }
  for(const mid of c.riders){if(mid===c.driver)continue;
- const a=p.adjustments?.[leg+'|'+mid]||{};if(a.excluded)continue;const count=a.count??1,price=a.unitYen??p.unitYen;
+ const a=p.adjustments?.[leg+'|'+mid]||{};if(a.excluded)continue;const count=a.count??1,price=a.unitYen??fixedCarFee(s,p,c);
  const key=mid+'|'+c.driver;let line=lines.get(key)||{rider:mid,driver:c.driver,count:0,amount:0,unset:false,details:[]};
  line.count+=count;line.unset ||= !Number.isFinite(price);if(Number.isFinite(price))line.amount+=count*price;
  line.details.push({planId:p.id,eventId:e.id,date:day,leg,count,unitYen:price,amount:Number.isFinite(price)?count*price:null,reason:a.reason||''});lines.set(key,line);
@@ -116,6 +123,6 @@ function importLegacyTraining(s,data){if(!data||!Array.isArray(data.menus)||!Arr
  for(const cat of data.categories){if(!cat.id||typeof cat.name!=='string')throw Error('分類が不正です');if(!out.training.categories.some(c=>c.id===cat.id))out.training.categories.push({id:cat.id,name:cat.name});}
  for(const menu of data.menus){const seconds=menu.seconds??Number(menu.minutes||0)*60;if(!menu.id||!menu.name||!Number.isInteger(seconds)||seconds<0)throw Error('種目が不正です');if(!out.training.menus.some(m=>m.id===menu.id)){out.training.menus.push({id:menu.id,name:menu.name,categoryId:menu.categoryId,seconds,requiresSets:menu.requiresSets!==false});added++;}}
  return {state:out,added};}
-root.ClubDomain={copy,validDate,validTime,addDays,addMonths,today,secondsText,defaultAttendance,seedAttendance,datesFor,calendarItems,trainingTotals,reconcileAbsent,planPeople,participating,need,missing,planErrors,move,eventFeeSplit,mergeEventCosts,settlement,importLegacyTraining};
+root.ClubDomain={copy,validDate,validTime,addDays,addMonths,today,secondsText,defaultAttendance,seedAttendance,datesFor,calendarItems,trainingTotals,reconcileAbsent,planPeople,participating,need,missing,planErrors,move,eventFeeSplit,mergeEventCosts,fixedCarFee,settlement,importLegacyTraining};
 if(typeof module!=='undefined')module.exports=root.ClubDomain;
 })(typeof globalThis!=='undefined'?globalThis:this);
