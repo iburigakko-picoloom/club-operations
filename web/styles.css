@@ -497,3 +497,6 @@ body[data-screen="car"] .app{max-width:1100px}
 .op-car-editor .op-people-grid{grid-template-rows:repeat(4,34px);gap:4px}
 .op-car-editor .op-pool .op-people-grid .person{height:28px;min-height:28px;margin:3px 0;padding:2px 5px}
 @media(max-width:370px){.op-header-action{min-width:34px;font-size:8px}.op-plan-state button{min-width:40px;padding:0 5px;font-size:9px}.op-expense-grid{gap:0 7px}}
+
+/* Planned carpool amounts lead; actual receipts stay secondary. */
+.op-settlement-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px}.op-settlement-summary>div{background:#f3f8f4;border:1px solid var(--line);border-radius:8px;padding:14px 12px;min-width:0}.op-settlement-summary span{display:block;font-size:12px;color:var(--muted)}.op-settlement-summary strong{display:block;font-size:24px;font-weight:650;margin-top:6px;overflow-wrap:anywhere}.op-settlement-actual{font-size:12px;color:var(--muted);line-height:1.7;padding:10px 0;border-bottom:1px solid var(--line)}

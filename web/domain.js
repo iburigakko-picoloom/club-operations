@@ -136,10 +136,12 @@ function legacySettlement(s,month,now=today()){
  }} }
  }return [...lines.values()];}
 function normalSettlement(s,month){
- const locked=new Set((s.settlements||[]).filter(x=>x.locked).flatMap(x=>x.planIds||[])),days=new Map();
+ const locked=new Set((s.settlements||[]).filter(x=>x.locked).flatMap(x=>x.planIds||[])),days=new Map(),registeredPlans=new Set(),draftPlans=new Set();
  const dayFor=date=>{if(!days.has(date))days.set(date,{date,collections:[],drivers:new Map(),planIds:new Set(),errors:[]});return days.get(date);};
  for(const p of s.plans){const e=s.events.find(e=>e.id===p.eventId);
   if(!e||p.fareMode==='event'||locked.has(p.id))continue;
+  const inMonth=['outbound','return'].some(leg=>p.enabled[leg]&&(p.legDates?.[leg]||(leg==='return'?(e.endDate||e.date):e.date)).slice(0,7)===month);
+  if(inMonth&&!e.cancelled&&!p.excluded){if(p.status==='registered')registeredPlans.add(p.id);else if(p.status==='draft')draftPlans.add(p.id);}
   const hasCollected=Object.values(p.collections||{}).some(x=>x.status==='collected');
   const invalidStatus=e.cancelled||p.status!=='registered'||p.excluded;
   if(invalidStatus&&!hasCollected)continue;
@@ -163,24 +165,26 @@ function normalSettlement(s,month){
       if(!Number.isInteger(receipt.amount)||receipt.amount<0||receipt.amount>50)day.errors.push('回収額は0〜50円の整数で入力してください');
       else{collectedAmount=receipt.amount;status='collected';}
      }else if(receipt&&receipt.status!=='uncollected')day.errors.push('回収状態を確認してください');
-     day.collections.push({planId:p.id,eventId:e.id,eventTitle:e.title||'',date,leg,carId:c.id,rider,count:1,unitYen:50,amount:50,status,collectedAmount});
+     day.collections.push({planId:p.id,eventId:e.id,eventTitle:e.title||'',date,leg,carId:c.id,rider,count:1,unitYen:50,amount:50,expectedAmount:invalidStatus||!p.enabled[leg]?0:50,status,collectedAmount});
     }
    }
    // A retained receipt must not disappear silently after a seat is edited.
    for(const [key,receipt] of Object.entries(p.collections||{}))if(key.startsWith(leg+'|')&&receipt.status==='collected'&&!used.has(key.slice(leg.length+1))){
-    if(Number.isInteger(receipt.amount)&&receipt.amount>=0&&receipt.amount<=50){day.collections.push({planId:p.id,eventId:e.id,eventTitle:e.title||'',date,leg,rider:key.slice(leg.length+1),count:0,unitYen:50,amount:0,status:'collected',collectedAmount:receipt.amount,orphaned:true});}
+    if(Number.isInteger(receipt.amount)&&receipt.amount>=0&&receipt.amount<=50){day.collections.push({planId:p.id,eventId:e.id,eventTitle:e.title||'',date,leg,rider:key.slice(leg.length+1),count:0,unitYen:50,amount:0,expectedAmount:0,status:'collected',collectedAmount:receipt.amount,orphaned:true});}
     day.errors.push('回収済みの同乗者と配車の配置が一致しません');
    }
   }
  }
  const daily=[...days.values()].sort((a,b)=>a.date.localeCompare(b.date)).map(day=>{
-  const collectedAmount=day.collections.reduce((n,x)=>n+x.collectedAmount,0);let payouts=[];
-  if(!day.errors.length){try{payouts=allocateCollected(collectedAmount,[...day.drivers.values()]);}catch(error){day.errors.push(error.message);}}
-  const paidAmount=payouts.reduce((n,x)=>n+x.amount,0);
-  return {...day,drivers:[...day.drivers.values()],planIds:[...day.planIds].sort(),errors:[...new Set(day.errors)],collectedAmount,paidAmount,unallocatedAmount:collectedAmount-paidAmount,payouts};
+  const collectedAmount=day.collections.reduce((n,x)=>n+x.collectedAmount,0),expectedAmount=day.collections.reduce((n,x)=>n+x.expectedAmount,0),uncollectedAmount=day.collections.reduce((n,x)=>n+Math.max(0,x.expectedAmount-x.collectedAmount),0);let payouts=[],plannedPayouts=[];
+  if(!day.errors.length){try{const drivers=[...day.drivers.values()];payouts=allocateCollected(collectedAmount,drivers);plannedPayouts=allocateCollected(expectedAmount,drivers);}catch(error){day.errors.push(error.message);}}
+  const paidAmount=payouts.reduce((n,x)=>n+x.amount,0),plannedPaidAmount=plannedPayouts.reduce((n,x)=>n+x.amount,0);
+  return {...day,drivers:[...day.drivers.values()],planIds:[...day.planIds].sort(),errors:[...new Set(day.errors)],expectedAmount,uncollectedAmount,plannedPaidAmount,unallocatedPlannedAmount:expectedAmount-plannedPaidAmount,plannedPayouts,collectedAmount,paidAmount,unallocatedAmount:collectedAmount-paidAmount,payouts};
  });
  const payouts=new Map();for(const day of daily)for(const payment of day.payouts){const row=payouts.get(payment.driver)||{rider:'',driver:payment.driver,fareMode:'pooled',count:0,amount:0,unset:false,details:[]};row.amount+=payment.amount;row.details.push({date:day.date,amount:payment.amount,weight:payment.weight,collectedAmount:day.collectedAmount,planIds:day.planIds,fareMode:'pooled'});payouts.set(payment.driver,row);}
- return {days:daily,collections:daily.flatMap(x=>x.collections),payouts:[...payouts.values()].sort((a,b)=>a.driver<b.driver?-1:a.driver>b.driver?1:0),errors:daily.flatMap(x=>x.errors.map(message=>({date:x.date,message}))),collectedAmount:daily.reduce((n,x)=>n+x.collectedAmount,0),paidAmount:daily.reduce((n,x)=>n+x.paidAmount,0)};
+ const plannedPayouts=new Map();for(const day of daily)for(const payment of day.plannedPayouts){const row=plannedPayouts.get(payment.driver)||{rider:'',driver:payment.driver,fareMode:'pooled',count:0,amount:0,unset:false,details:[]};row.amount+=payment.amount;row.details.push({date:day.date,amount:payment.amount,weight:payment.weight,expectedAmount:day.expectedAmount,planIds:day.planIds,fareMode:'pooled'});plannedPayouts.set(payment.driver,row);}
+ const byDriver=(a,b)=>a.driver<b.driver?-1:a.driver>b.driver?1:0;
+ return {days:daily,collections:daily.flatMap(x=>x.collections),payouts:[...payouts.values()].sort(byDriver),plannedPayouts:[...plannedPayouts.values()].sort(byDriver),expectedAmount:daily.reduce((n,x)=>n+x.expectedAmount,0),uncollectedAmount:daily.reduce((n,x)=>n+x.uncollectedAmount,0),plannedPaidAmount:daily.reduce((n,x)=>n+x.plannedPaidAmount,0),registeredPlanCount:registeredPlans.size,draftPlanCount:draftPlans.size,errors:daily.flatMap(x=>x.errors.map(message=>({date:x.date,message}))),collectedAmount:daily.reduce((n,x)=>n+x.collectedAmount,0),paidAmount:daily.reduce((n,x)=>n+x.paidAmount,0)};
 }
 function settlement(s,month,now=today()){
  const eventLines=legacySettlement({...s,plans:s.plans.filter(p=>p.fareMode==='event')},month,now);
