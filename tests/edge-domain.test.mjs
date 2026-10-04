@@ -6,6 +6,16 @@ const owner={id:'owner',name:'オーナー'},viewer={id:'viewer',name:'閲覧者
 function populated(){const s=emptyState('g','部活');s.people=Array.from({length:6},(_,i)=>({id:'m'+i,name:'部員'+i,grade:3,seniority:'below',pickup:'university',active:true,defaultOverride:null}));s.events=[{id:'e',title:'練習',kind:'club',date:today(),start:'19:00',end:'21:00',assignees:[]}];seedAttendance(s);return s;}
 function plan(){const cars=[{id:'c',pickup:'university',driver:'m0',riders:['m1','m2','m3']}];return {id:'p',eventId:'e',linked:true,enabled:{outbound:true,return:true},need:{outbound:{},return:{}},legs:{outbound:cars,return:structuredClone(cars)},unitYen:300,status:'draft'};}
 const update=(s,c,u=owner)=>updateState(s,c,u,'owner','g',ops);
+test('normal carpool receipts persist with old fees and finalized history intact',()=>{
+ const s=populated(),p=plan();p.status='registered';p.collections={'outbound|m1':{status:'collected',amount:49},'return|m1':{status:'uncollected',amount:0}};s.plans=[p];const before=structuredClone(s);
+ const next=update(s,{plans:structuredClone(s.plans)});assert.deepEqual(next.plans[0].collections,p.collections);assert.equal(next.plans[0].unitYen,300);assert.deepEqual(s,before);
+ next.settlements=[{id:'history',locked:true,planIds:['p'],lines:[{rider:'m1',driver:'m0',amount:300}]}];const changed=structuredClone(next.plans);changed[0].collections['outbound|m1'].amount=50;assert.throws(()=>update(next,{plans:changed}),e=>e.status===409);assert.deepEqual(next.settlements[0].lines,[{rider:'m1',driver:'m0',amount:300}]);
+});
+test('receipt amounts, status, rider ID and plan permissions are validated',()=>{
+ for(const receipt of [{status:'collected',amount:51},{status:'collected',amount:-1},{status:'collected',amount:1.5},{status:'collected',amount:true},{status:'collected',amount:null},{status:'paid',amount:50},{status:'uncollected',amount:50}]){const s=populated(),p=plan();p.collections={'outbound|m1':receipt};assert.throws(()=>update(s,{plans:[p]}),e=>e.status===400);}
+ for(const key of ['outbound|unknown','both|m1','outbound|m1|extra']){const s=populated(),p=plan();p.collections={[key]:{status:'collected',amount:50}};assert.throws(()=>update(s,{plans:[p]}),e=>e.status===400);}
+ const s=populated(),p=plan();p.collections={'outbound|m1':{status:'collected',amount:50}};assert.throws(()=>update(s,{plans:[p]},viewer),e=>e.status===403);s.roles['配車']=['viewer'];assert.equal(update(s,{plans:[p]},viewer).plans[0].collections['outbound|m1'].amount,50);
+});
 test('attendance-only role removes absent riders and drivers on both legs without touching other data',()=>{
  const s=populated();s.attendance['e|m0']=true;s.plans=[plan()];s.roles['出欠']=['viewer'];s.plans[0].linked=false;
  const attendance={...s.attendance,'e|m0':false,'e|m1':false};const next=update(s,{attendance},viewer);

@@ -45,6 +45,7 @@ export function validate(s,operators){
   }
   if(p.linked&&(!equal(p.legs.outbound,p.legs.return)||!equal(p.need.outbound,p.need.return)))fail('往復のデータが一致しません');
   for(const [k,a] of Object.entries(dict(p.adjustments||{}))){const [leg,mid,...rest]=k.split('|');if(rest.length||!['outbound','return'].includes(leg)||!ps.has(mid))fail('精算調整の対象を確認してください');dict(a);number(a.count,0,999,true);number(a.unitYen,0,1e6,true);}
+  for(const [k,receipt] of Object.entries(dict(p.collections===undefined?{}:p.collections))){const [leg,mid,...rest]=k.split('|');if(rest.length||!['outbound','return'].includes(leg)||!ps.has(mid))fail('回収対象を確認してください');dict(receipt);if(!['collected','uncollected'].includes(receipt.status))fail('回収状態を確認してください');number(receipt.amount,0,50);if(receipt.status==='uncollected'&&receipt.amount!==0)fail('未回収の金額は0円にしてください');}
  }
  for(const v of s.venues){text(v.name,120,true);number(v.courts,1,30);}
  for(const i of s.equipment){text(i.name,120,true);number(i.quantity);text(i.unit,20,true);number(i.threshold,0,1e6,true);}

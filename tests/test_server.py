@@ -28,6 +28,29 @@ def make_plan():
  cars=[{'id':'c','pickup':'university','driver':'m0','riders':['m1','m2','m3']}]
  return {'id':'p','eventId':'e','linked':True,'legs':{'outbound':cars,'return':copy.deepcopy(cars)},'enabled':{'outbound':True,'return':True},'need':{'outbound':{},'return':{}},'status':'draft','version':1,'unitYen':300}
 
+def test_normal_carpool_receipts_reload_without_changing_old_fees_or_paid_history(env):
+ u=account(env);s=populate(env,u,create(env,u));p=make_plan();p['status']='registered'
+ p['collections']={'outbound|m1':{'status':'collected','amount':49},'return|m1':{'status':'uncollected','amount':0}}
+ s=patch(env,u,s,{'plans':[p],'attendance':{**s['attendance'],'e|m0':True}}).json()
+ loaded=get(env,s['group']['id']);assert loaded['plans'][0]['collections']==p['collections'];assert loaded['plans'][0]['unitYen']==300
+ snapshot={'id':'old-paid','month':module.now().date().isoformat()[:7],'locked':True,'planIds':['p'],'lines':[{'rider':'m1','driver':'m0','amount':300}]}
+ r=patch(env,u,s,{'settlements':[snapshot]});assert r.status_code==200;r=r.json()
+ changed=copy.deepcopy(r['plans']);changed[0]['collections']['outbound|m1']['amount']=50
+ assert patch(env,u,r,{'plans':changed}).status_code==409
+ assert get(env,s['group']['id'])['settlements']==[snapshot]
+
+@pytest.mark.parametrize('key,receipt',[
+ ('outbound|m1',{'status':'collected','amount':51}),('outbound|m1',{'status':'collected','amount':-1}),
+ ('outbound|m1',{'status':'collected','amount':1.5}),('outbound|m1',{'status':'collected','amount':True}),
+ ('outbound|m1',{'status':'collected','amount':None}),('outbound|m1',{'status':'paid','amount':50}),
+ ('outbound|m1',{'status':'uncollected','amount':50}),('both|m1',{'status':'collected','amount':50}),
+ ('outbound|unknown',{'status':'collected','amount':50}),('outbound|m1|extra',{'status':'collected','amount':50}),
+])
+def test_normal_carpool_receipts_reject_invalid_input(env,key,receipt):
+ u=account(env);s=populate(env,u,create(env,u));p=make_plan();p['collections']={key:receipt}
+ response=patch(env,u,s,{'plans':[p]});assert response.status_code==400,response.text
+ assert get(env,s['group']['id'])['plans']==[]
+
 def test_attendance_removes_assigned_people_and_survives_reload(env):
  u=account(env);s=populate(env,u,create(env,u));s=patch(env,u,s,{'plans':[make_plan()]}).json()
  original=copy.deepcopy(s['training']);attendance={**s['attendance'],'e|m0':False,'e|m1':False}

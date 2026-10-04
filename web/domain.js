@@ -91,14 +91,30 @@ function eventFeeSplit(total,occupants){
  const perPerson=Math.round(total/occupants/10)*10;
  return {total,occupants,perPerson,driverReceives:perPerson*Math.max(0,occupants-1)};
 }
-function fixedCarFee(s,p,c){
+function legacyFixedCarFee(s,p,c){
  const override=p.unitYenOverride;
  if(Number.isInteger(override))return override;
  const categoryFee=s.settings?.carpoolFees?.[c?.pickup];
  if(Number.isInteger(categoryFee))return categoryFee;
  return p.unitYen??s.settings?.unitYen??s.settings?.carpoolFees?.gym??null;
 }
-function settlement(s,month,now=today()){
+function fixedCarFee(s,p,c){return p.fareMode==='event'?legacyFixedCarFee(s,p,c):50;}
+// Integer arithmetic also keeps ties stable across reordering and recalculation.
+function allocateCollected(total,drivers){
+ if(!Number.isSafeInteger(total)||total<0)throw Error('回収額を確認してください');
+ const ids=new Set(),rows=drivers.map(row=>{
+  if(typeof row.driver!=='string'||!row.driver||ids.has(row.driver)||!Number.isSafeInteger(row.weight)||row.weight<1)throw Error('運転者と配分の重みを確認してください');
+  ids.add(row.driver);return {...row};
+ }).sort((a,b)=>a.driver<b.driver?-1:a.driver>b.driver?1:0);
+ if(!rows.length){if(total)throw Error('回収額を配分する運転者がいません');return [];}
+ const weight=rows.reduce((n,row)=>n+BigInt(row.weight),0n),yen=BigInt(total);
+ for(const row of rows){const ideal=yen*BigInt(row.weight);row.amount=Number(ideal/weight);row.remainder=ideal%weight;}
+ const residual=total-rows.reduce((n,row)=>n+row.amount,0);
+ const ranked=[...rows].sort((a,b)=>a.remainder>b.remainder?-1:a.remainder<b.remainder?1:0);
+ for(let i=0;i<residual;i++)ranked[i].amount++;
+ return rows.map(({remainder,...row})=>row);
+}
+function legacySettlement(s,month,now=today()){
  const lines=new Map();for(const p of s.plans){const e=s.events.find(e=>e.id===p.eventId);if(!e||e.cancelled||p.status!=='registered'||p.excluded)continue;
  const legs=p.fareMode==='event'&&p.linked?['outbound']:['outbound','return'];
  for(const leg of legs){const day=p.legDates?.[leg]|| (leg==='return'?(e.endDate||e.date):e.date);if(!p.enabled[leg]||day.slice(0,7)!==month)continue;
@@ -113,16 +129,67 @@ function settlement(s,month,now=today()){
   continue;
  }
  for(const mid of c.riders){if(mid===c.driver)continue;
- const a=p.adjustments?.[leg+'|'+mid]||{};if(a.excluded)continue;const count=a.count??1,price=a.unitYen??fixedCarFee(s,p,c);
+ const a=p.adjustments?.[leg+'|'+mid]||{};if(a.excluded)continue;const count=a.count??1,price=a.unitYen??legacyFixedCarFee(s,p,c);
  const key=mid+'|'+c.driver;let line=lines.get(key)||{rider:mid,driver:c.driver,count:0,amount:0,unset:false,details:[]};
  line.count+=count;line.unset ||= !Number.isFinite(price);if(Number.isFinite(price))line.amount+=count*price;
  line.details.push({planId:p.id,eventId:e.id,date:day,leg,count,unitYen:price,amount:Number.isFinite(price)?count*price:null,reason:a.reason||''});lines.set(key,line);
  }} }
  }return [...lines.values()];}
+function normalSettlement(s,month){
+ const locked=new Set((s.settlements||[]).filter(x=>x.locked).flatMap(x=>x.planIds||[])),days=new Map();
+ const dayFor=date=>{if(!days.has(date))days.set(date,{date,collections:[],drivers:new Map(),planIds:new Set(),errors:[]});return days.get(date);};
+ for(const p of s.plans){const e=s.events.find(e=>e.id===p.eventId);
+  if(!e||p.fareMode==='event'||locked.has(p.id))continue;
+  const hasCollected=Object.values(p.collections||{}).some(x=>x.status==='collected');
+  const invalidStatus=e.cancelled||p.status!=='registered'||p.excluded;
+  if(invalidStatus&&!hasCollected)continue;
+  for(const leg of ['outbound','return']){
+   const date=p.legDates?.[leg]||(leg==='return'?(e.endDate||e.date):e.date);
+   const collectedLeg=Object.entries(p.collections||{}).some(([key,x])=>key.startsWith(leg+'|')&&x.status==='collected');
+   if((!p.enabled[leg]&&!collectedLeg)||date.slice(0,7)!==month)continue;
+   const day=dayFor(date);day.planIds.add(p.id);const used=new Set();
+   if(invalidStatus||!p.enabled[leg])day.errors.push('回収済みの配車の状態・対象の片道を確認してください');
+   // The weight belongs to a driven leg, never to the number of passengers.
+   for(const c of p.legs[leg]){
+    if(c.driver){const weight={university:2,station:3}[c.pickup];
+     if(!weight)day.errors.push('大学配車・駅配車の区分を確認してください');
+     else{const driver=day.drivers.get(c.driver)||{driver:c.driver,weight:0};driver.weight+=weight;day.drivers.set(c.driver,driver);}
+    }else if(c.riders.length)day.errors.push('運転者を指定してください');
+    for(const rider of new Set(c.riders)){
+     if(rider===c.driver)continue;
+     if(used.has(rider)){day.errors.push('同じ片道に同乗者が重複しています');continue;}used.add(rider);
+     const receipt=p.collections?.[leg+'|'+rider];let collectedAmount=0,status='uncollected';
+     if(receipt?.status==='collected'){
+      if(!Number.isInteger(receipt.amount)||receipt.amount<0||receipt.amount>50)day.errors.push('回収額は0〜50円の整数で入力してください');
+      else{collectedAmount=receipt.amount;status='collected';}
+     }else if(receipt&&receipt.status!=='uncollected')day.errors.push('回収状態を確認してください');
+     day.collections.push({planId:p.id,eventId:e.id,eventTitle:e.title||'',date,leg,carId:c.id,rider,count:1,unitYen:50,amount:50,status,collectedAmount});
+    }
+   }
+   // A retained receipt must not disappear silently after a seat is edited.
+   for(const [key,receipt] of Object.entries(p.collections||{}))if(key.startsWith(leg+'|')&&receipt.status==='collected'&&!used.has(key.slice(leg.length+1))){
+    if(Number.isInteger(receipt.amount)&&receipt.amount>=0&&receipt.amount<=50){day.collections.push({planId:p.id,eventId:e.id,eventTitle:e.title||'',date,leg,rider:key.slice(leg.length+1),count:0,unitYen:50,amount:0,status:'collected',collectedAmount:receipt.amount,orphaned:true});}
+    day.errors.push('回収済みの同乗者と配車の配置が一致しません');
+   }
+  }
+ }
+ const daily=[...days.values()].sort((a,b)=>a.date.localeCompare(b.date)).map(day=>{
+  const collectedAmount=day.collections.reduce((n,x)=>n+x.collectedAmount,0);let payouts=[];
+  if(!day.errors.length){try{payouts=allocateCollected(collectedAmount,[...day.drivers.values()]);}catch(error){day.errors.push(error.message);}}
+  const paidAmount=payouts.reduce((n,x)=>n+x.amount,0);
+  return {...day,drivers:[...day.drivers.values()],planIds:[...day.planIds].sort(),errors:[...new Set(day.errors)],collectedAmount,paidAmount,unallocatedAmount:collectedAmount-paidAmount,payouts};
+ });
+ const payouts=new Map();for(const day of daily)for(const payment of day.payouts){const row=payouts.get(payment.driver)||{rider:'',driver:payment.driver,fareMode:'pooled',count:0,amount:0,unset:false,details:[]};row.amount+=payment.amount;row.details.push({date:day.date,amount:payment.amount,weight:payment.weight,collectedAmount:day.collectedAmount,planIds:day.planIds,fareMode:'pooled'});payouts.set(payment.driver,row);}
+ return {days:daily,collections:daily.flatMap(x=>x.collections),payouts:[...payouts.values()].sort((a,b)=>a.driver<b.driver?-1:a.driver>b.driver?1:0),errors:daily.flatMap(x=>x.errors.map(message=>({date:x.date,message}))),collectedAmount:daily.reduce((n,x)=>n+x.collectedAmount,0),paidAmount:daily.reduce((n,x)=>n+x.paidAmount,0)};
+}
+function settlement(s,month,now=today()){
+ const eventLines=legacySettlement({...s,plans:s.plans.filter(p=>p.fareMode==='event')},month,now);
+ return [...normalSettlement(s,month).payouts,...eventLines];
+}
 function importLegacyTraining(s,data){if(!data||!Array.isArray(data.menus)||!Array.isArray(data.categories))throw Error('メニューのJSONを確認してください');const out=copy(s);out.training ||= {menus:[],categories:[],sheets:[]};let added=0;
  for(const cat of data.categories){if(!cat.id||typeof cat.name!=='string')throw Error('分類が不正です');if(!out.training.categories.some(c=>c.id===cat.id))out.training.categories.push({id:cat.id,name:cat.name});}
  for(const menu of data.menus){const seconds=menu.seconds??Number(menu.minutes||0)*60;if(!menu.id||!menu.name||!Number.isInteger(seconds)||seconds<0)throw Error('種目が不正です');if(!out.training.menus.some(m=>m.id===menu.id)){out.training.menus.push({id:menu.id,name:menu.name,categoryId:menu.categoryId,seconds,requiresSets:menu.requiresSets!==false});added++;}}
  return {state:out,added};}
-root.ClubDomain={copy,validDate,validTime,addDays,addMonths,today,secondsText,defaultAttendance,seedAttendance,datesFor,calendarItems,trainingTotals,reconcileAbsent,planPeople,participating,need,missing,planErrors,move,eventFeeSplit,mergeEventCosts,fixedCarFee,settlement,importLegacyTraining};
+root.ClubDomain={copy,validDate,validTime,addDays,addMonths,today,secondsText,defaultAttendance,seedAttendance,datesFor,calendarItems,trainingTotals,reconcileAbsent,planPeople,participating,need,missing,planErrors,move,eventFeeSplit,mergeEventCosts,legacyFixedCarFee,fixedCarFee,allocateCollected,legacySettlement,normalSettlement,settlement,importLegacyTraining};
 if(typeof module!=='undefined')module.exports=root.ClubDomain;
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -254,6 +254,14 @@ def validate(s,operators):
             leg,sep,mid=key.partition('|')
             if leg not in ['outbound','return'] or mid not in ps:fail('精算調整の対象を確認してください')
             number(a.get('count'),0,999,True);number(a.get('unitYen'),0,1000000,True)
+        receipts=p.get('collections',{})
+        if not isinstance(receipts,dict):fail('回収記録の形式を確認してください')
+        for key,receipt in receipts.items():
+            leg,sep,mid=key.partition('|')
+            if not sep or leg not in ['outbound','return'] or mid not in ps:fail('回収対象を確認してください')
+            if not isinstance(receipt,dict) or receipt.get('status') not in ['collected','uncollected']:fail('回収状態を確認してください')
+            number(receipt.get('amount'),0,50)
+            if receipt['status']=='uncollected' and receipt['amount']!=0:fail('未回収の金額は0円にしてください')
     for v in s['venues']:text(v.get('name'),120,True);number(v.get('courts'),1,30)
     for i in s['equipment']:
         text(i.get('name'),120,True);number(i.get('quantity'));text(i.get('unit'),20,True);number(i.get('threshold'),0,1000000,True)
