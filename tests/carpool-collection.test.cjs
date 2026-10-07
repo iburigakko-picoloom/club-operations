@@ -127,3 +127,19 @@ test('locked old statements and their plans never recalculate, and the original 
 test('0 collected is recorded as collected and distinct from an absent receipt',()=>{
  const s=state(),p=plan();s.plans=[p];receive(p,'outbound','a',0);const r=D.normalSettlement(s,'2026-09');assert.equal(r.collections.find(x=>x.rider==='a'&&x.leg==='outbound').status,'collected');assert.equal(r.collections.find(x=>x.rider==='a'&&x.leg==='return').status,'uncollected');assert.equal(r.paidAmount,0);
 });
+test('monthly collection totals combine each rider across dates and legs while retaining receipts',()=>{
+ const s=state(),p=plan(),next=plan('next','next-event');s.events.push({id:'next-event',kind:'club',date:'2026-09-03'});next.enabled.return=false;s.plans=[p,next];receive(p,'outbound','a',49);receive(next,'outbound','a',0);
+ const normal=D.normalSettlement(s,'2026-09'),before=structuredClone(normal),rows=D.collectionTotalsByRider(normal.collections);
+ assert.equal(rows.length,2);assert.deepEqual(rows.map(x=>[x.rider,x.count,x.expectedAmount,x.collectedAmount,x.uncollectedAmount,x.recordedCount]),[['a',3,150,49,101,2],['b',3,150,0,150,0]]);
+ assert.deepEqual(rows[0].details.map(x=>[x.date,x.leg,x.status,x.collectedAmount]),[['2026-09-02','outbound','collected',49],['2026-09-02','return','uncollected',0],['2026-09-03','outbound','collected',0]]);
+ assert.equal(rows.reduce((n,x)=>n+x.expectedAmount,0),normal.expectedAmount);assert.equal(rows.reduce((n,x)=>n+x.collectedAmount,0),normal.collectedAmount);assert.equal(rows.reduce((n,x)=>n+x.uncollectedAmount,0),normal.uncollectedAmount);assert.deepEqual(normal,before);
+});
+test('grouped receipts do not offset another leg with money from a removed seat',()=>{
+ const s=state(),p=plan();s.plans=[p];receive(p,'outbound','a',50);p.legs.outbound[0].riders=[];
+ const normal=D.normalSettlement(s,'2026-09'),row=D.collectionTotalsByRider(normal.collections).find(x=>x.rider==='a');
+ assert.equal(row.expectedAmount,50);assert.equal(row.collectedAmount,50);assert.equal(row.uncollectedAmount,50);assert.equal(row.count,1);assert.equal(row.orphaned,true);assert.equal(row.details.length,2);assert(normal.errors.length>0);
+});
+test('collection grouping uses member IDs even when names match and has a stable empty result',()=>{
+ const s=state();s.people.forEach(x=>x.name='同じ名前');s.plans=[plan()];const normal=D.normalSettlement(s,'2026-09');
+ assert.deepEqual(D.collectionTotalsByRider(normal.collections).map(x=>[x.rider,x.expectedAmount]),[['a',100],['b',100]]);assert.deepEqual(D.collectionTotalsByRider([...normal.collections].reverse()).map(x=>[x.rider,x.expectedAmount]),[['a',100],['b',100]]);assert.deepEqual(D.collectionTotalsByRider([]),[]);
+});

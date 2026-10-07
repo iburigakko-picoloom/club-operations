@@ -186,6 +186,15 @@ function normalSettlement(s,month){
  const byDriver=(a,b)=>a.driver<b.driver?-1:a.driver>b.driver?1:0;
  return {days:daily,collections:daily.flatMap(x=>x.collections),payouts:[...payouts.values()].sort(byDriver),plannedPayouts:[...plannedPayouts.values()].sort(byDriver),expectedAmount:daily.reduce((n,x)=>n+x.expectedAmount,0),uncollectedAmount:daily.reduce((n,x)=>n+x.uncollectedAmount,0),plannedPaidAmount:daily.reduce((n,x)=>n+x.plannedPaidAmount,0),registeredPlanCount:registeredPlans.size,draftPlanCount:draftPlans.size,errors:daily.flatMap(x=>x.errors.map(message=>({date:x.date,message}))),collectedAmount:daily.reduce((n,x)=>n+x.collectedAmount,0),paidAmount:daily.reduce((n,x)=>n+x.paidAmount,0)};
 }
+function collectionTotalsByRider(collections){
+ const riders=new Map();
+ for(const x of collections){
+  const row=riders.get(x.rider)||{rider:x.rider,count:0,expectedAmount:0,collectedAmount:0,uncollectedAmount:0,recordedCount:0,orphaned:false,details:[]};
+  row.count+=x.expectedAmount>0?x.count:0;row.expectedAmount+=x.expectedAmount;row.collectedAmount+=x.collectedAmount;row.uncollectedAmount+=Math.max(0,x.expectedAmount-x.collectedAmount);
+  if(x.status==='collected')row.recordedCount++;row.orphaned||=!!x.orphaned;row.details.push(x);riders.set(x.rider,row);
+ }
+ return [...riders.values()].sort((a,b)=>a.rider<b.rider?-1:a.rider>b.rider?1:0);
+}
 function settlement(s,month,now=today()){
  const eventLines=legacySettlement({...s,plans:s.plans.filter(p=>p.fareMode==='event')},month,now);
  return [...normalSettlement(s,month).payouts,...eventLines];
@@ -194,6 +203,6 @@ function importLegacyTraining(s,data){if(!data||!Array.isArray(data.menus)||!Arr
  for(const cat of data.categories){if(!cat.id||typeof cat.name!=='string')throw Error('分類が不正です');if(!out.training.categories.some(c=>c.id===cat.id))out.training.categories.push({id:cat.id,name:cat.name});}
  for(const menu of data.menus){const seconds=menu.seconds??Number(menu.minutes||0)*60;if(!menu.id||!menu.name||!Number.isInteger(seconds)||seconds<0)throw Error('種目が不正です');if(!out.training.menus.some(m=>m.id===menu.id)){out.training.menus.push({id:menu.id,name:menu.name,categoryId:menu.categoryId,seconds,requiresSets:menu.requiresSets!==false});added++;}}
  return {state:out,added};}
-root.ClubDomain={copy,validDate,validTime,addDays,addMonths,today,secondsText,defaultAttendance,seedAttendance,datesFor,calendarItems,trainingTotals,reconcileAbsent,planPeople,participating,need,missing,planErrors,move,eventFeeSplit,mergeEventCosts,legacyFixedCarFee,fixedCarFee,allocateCollected,legacySettlement,normalSettlement,settlement,importLegacyTraining};
+root.ClubDomain={copy,validDate,validTime,addDays,addMonths,today,secondsText,defaultAttendance,seedAttendance,datesFor,calendarItems,trainingTotals,reconcileAbsent,planPeople,participating,need,missing,planErrors,move,eventFeeSplit,mergeEventCosts,legacyFixedCarFee,fixedCarFee,allocateCollected,legacySettlement,normalSettlement,collectionTotalsByRider,settlement,importLegacyTraining};
 if(typeof module!=='undefined')module.exports=root.ClubDomain;
 })(typeof globalThis!=='undefined'?globalThis:this);
