@@ -1151,7 +1151,7 @@
     const rows = setPlan.map(row => ({ row, menu: findMenu(row.menuId) })).filter(x => x.menu);
     const width = 1080;
     const rowHeight = 96;
-    const height = Math.max(1350, 480 + rows.length * rowHeight + (totals.sets4 !== totals.sets5 ? 110 : 0));
+    const height = Math.max(1350, 480 + rows.length * rowHeight);
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
@@ -1204,16 +1204,6 @@
       }
       y += rowHeight;
     });
-
-    if (totals.sets4 !== totals.sets5) {
-      roundedRect(ctx, 60, y + 10, width - 120, 96, 24, '#fff1f1', '#f0b6b6');
-      ctx.fillStyle = '#d94141';
-      ctx.font = '900 30px sans-serif';
-      ctx.fillText('注意', 100, y + 52);
-      ctx.fillStyle = '#9e2222';
-      ctx.font = '700 25px sans-serif';
-      ctx.fillText('4人と5人で合計セット数が異なります。', 190, y + 52);
-    }
 
     lastImageDataUrl = canvas.toDataURL('image/png');
     $('previewImg').src = lastImageDataUrl;

@@ -26,6 +26,9 @@ test('image time switch, fixed duration and old snapshots render without mutatio
  const {ctx,text}=harness(),s=sheet(),original=JSON.stringify(s);ctx.drawTraining(s);assert.ok(text.some(t=>t.includes('× 5set')));assert.ok(text.includes('2分'));assert.ok(text.some(t=>t.includes('大学体育館')));assert.ok(!text.includes('1回'));assert.equal(JSON.stringify(s),original);
  text.length=0;s.showImageTime=false;ctx.drawTraining(s);assert.ok(text.includes('5 set'));assert.ok(!text.some(t=>t.includes('×')));assert.ok(text.includes('2分'));
 });
+test('mismatched set warning stays on screen but is omitted from exported image',()=>{
+ const {ctx,text}=harness(),s=sheet();ctx.practiceDraft.rows[0].sets[5]=3;s.rows[0].sets[5]=3;const html=ctx.renderPracticeSets();assert.match(html,/人数ごとの合計人setが一致していません/);const cv=ctx.drawTraining(s);assert.ok(!text.some(t=>t.includes('注意')||t.includes('一致していません')));assert.equal(cv.height,860);
+});
 test('single person image and long titles are bounded',()=>{
  const {ctx,text}=harness(),s=sheet();s.patterns=[1];s.title='長い名前'.repeat(60);s.rows[0].sets[1]=4;const cv=ctx.drawTraining(s);assert.equal(cv.width,1080);assert.ok(text.includes('セット数 4 set'));assert.ok(text.some(t=>t.endsWith('…')));assert.ok(cv.height>=860);
 });

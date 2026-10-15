@@ -1224,7 +1224,7 @@ function measureLines(c,text,max){const out=[];for(const para of String(text).sp
 function imageCanvas(w,h){const cv=document.createElement('canvas');cv.width=w*2;cv.height=h*2;const c=cv.getContext('2d');c.scale(2,2);c.fillStyle='#fff';c.fillRect(0,0,w,h);c.fillStyle='#18211c';c.font='16px "Noto Sans CJK JP", sans-serif';return [cv,c];}
 function drawTraining(s){
  const t=D.trainingTotals(s.rows,s.patterns),w=1080,showTime=s.showImageTime!==false,solo=s.patterns.length===1&&s.patterns[0]===1;
- const yTable=305+(s.context?40:0)+(t.mismatch?45:0),rowH=72;
+ const yTable=305+(s.context?40:0),rowH=72;
  const [cv,c]=imageCanvas(w,Math.max(860,yTable+(s.rows.length+1)*rowH+60));
  const font=(size,bold=false)=>{c.font=`${bold?'600 ':''}${size}px "Noto Sans CJK JP", sans-serif`;};
  const fit=(text,max)=>{let v=String(text);if(c.measureText(v).width<=max)return v;while(v.length&&c.measureText(v+'…').width>max)v=v.slice(0,-1);return v+'…';};
@@ -1232,7 +1232,6 @@ function drawTraining(s){
  font(24);c.fillText(solo?`セット数 ${t.totals[1].sets} set`:`合計人set　${s.patterns.map(p=>p+'人：'+t.totals[p].peopleSets+' 人set').join(' / ')}`,60,194);
  font(30,true);c.fillText(`所要時間　${solo?D.secondsText(t.totals[1].seconds):timeSummary(t)}`,60,238);
  if(s.context){font(21);c.fillText(fit(`${jpDate(s.context.date)} ${s.context.venue||''}　${s.context.participants}人${s.context.courts?' / '+s.context.courts+'面':''}`,960),60,278);}
- if(t.mismatch){font(22);c.fillStyle='#c73535';c.fillText('人数ごとの合計人setが一致していません',60,yTable-20);}
  const columns=s.patterns.length===1?[showTime?720:820]:showTime?[550,790]:[720,880],nameWidth=columns[0]-165;
  c.fillStyle='#edf7f0';c.fillRect(60,yTable,960,rowH);c.fillStyle='#18211c';font(25,true);c.fillText('No.',75,yTable+46);c.fillText('メニュー',145,yTable+46);s.patterns.forEach((p,i)=>c.fillText(solo?'セット':p+'人',columns[i],yTable+46));
  s.rows.forEach((r,i)=>{const y=yTable+(i+1)*rowH;c.fillStyle=i%2?'#edf7f0':'#fff';c.fillRect(60,y,960,rowH);c.strokeStyle='#e5e9e6';c.strokeRect(60,y,960,rowH);c.fillStyle='#18211c';font(24);c.fillText(String(i+1),80,y+45);c.fillText(fit(r.name,nameWidth),145,y+45);
