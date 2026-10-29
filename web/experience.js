@@ -73,14 +73,16 @@ function drawScheduleCanvas(id){
  });
  const gridWidth=buckets.reduce((n,b)=>n+b.width,0)+categoryGap;
  const width=Math.max(440,pad*2+gridWidth);
- const height=pad*2+38+Math.max(48,...buckets.map(b=>b.bodyHeight));
+ probe.font=font(20,true);const venueName=eventVenue(e)?.name||'',venueLines=venueName?measureLines(probe,venueName,width-pad*2):[],headerHeight=venueLines.length?venueLines.length*26+14:0;
+ const height=pad*2+headerHeight+38+Math.max(48,...buckets.map(b=>b.bodyHeight));
  if(width>8000||height>12000)throw Error('画像にするデータが大きすぎます');
  const [cv,c]=imageCanvas(width,height);c.fillStyle='#fff';c.fillRect(0,0,width,height);c.fillStyle='#14813b';c.fillRect(0,0,width,10);
  const textWithDirection=(row,x,y,size,bold,lineHeight)=>{
   c.font=font(size,bold);c.fillStyle='#17251b';row.lines.forEach((line,i)=>c.fillText(line,x,y+i*lineHeight));
   if(row.direction){const last=row.lines[row.lines.length-1]||'';const directionX=x+c.measureText(last).width+7;c.font=font(13,true);c.fillStyle='#2463eb';c.fillText(row.direction,directionX,y+(row.lines.length-1)*lineHeight);}
  };
- let x=pad+(width-pad*2-gridWidth)/2;const headingY=pad,bodyTop=pad+38;
+ c.font=font(20,true);c.fillStyle='#17251b';venueLines.forEach((line,i)=>c.fillText(line,pad,pad+20+i*26));
+ let x=pad+(width-pad*2-gridWidth)/2;const headingY=pad+headerHeight,bodyTop=headingY+38;
  for(const [index,bucket] of buckets.entries()){
   c.fillStyle='#eaf4ec';c.fillRect(x,headingY,bucket.width,32);c.fillStyle='#26392b';c.font=font(17,true);c.textAlign='center';c.fillText(bucket.label,x+bucket.width/2,headingY+22);c.textAlign='left';
   bucket.cars.forEach((car,i)=>{
